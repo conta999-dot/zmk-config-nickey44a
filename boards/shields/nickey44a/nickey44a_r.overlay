@@ -7,7 +7,8 @@
     pointing_listener: pointing_listener {
         compatible = "zmk,input-listener";
         device = <&pointing_device>;
-        input-processors = <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
+        input-processors = <&zip_temp_layer 4 400>,
+                           <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
                            <&zip_xy_scaler 1 2>;
 
         mo2_scroll {
