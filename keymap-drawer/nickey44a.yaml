@@ -1,6 +1,4 @@
-layout:
-  dts_layout: boards/shields/nickey44a/nickey44a.dtsi
-  layout_name: physical_layout0
+layout: {zmk_keyboard: nickey44a}
 layers:
   default: [TAB, Q, W, E, R, T, Y, U, I, O, P, '''', LCTRL, A, S, D, F, G, H, J, K, L, ;, '-', LSHFT, Z, X, C, V, B, LEFT WIN, DELETE, N, M, ',', ., /, '=', '2',
     '1', SPACE, BSPC, RET, RALT, '', '']
