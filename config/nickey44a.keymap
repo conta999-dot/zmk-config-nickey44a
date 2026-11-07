@@ -45,7 +45,7 @@
 &kp LCTRL  &kp A  &kp S  &kp D  &kp F  &kp G                              &kp H    &kp J     &kp K      &kp L    &kp SEMI  &kp MINUS
 &kp LSHFT  &kp Z  &kp X  &kp C  &kp V  &kp B  &kp LEFT_WIN    &kp DELETE  &kp N    &kp M     &kp COMMA  &kp DOT  &kp FSLH  &kp EQUAL
                                 &mo 2  &mo 1  &kp SPACE       &kp BSPC    &kp RET  &kp RALT
-                                              &mkp MB1        &mkp MB1
+                                                      &none     &none
             >;
         };
 
@@ -55,7 +55,7 @@
 &trans      &kp F1        &kp F2        &kp F3        &kp F4        &kp F5                                  &kp LEFT          &kp DOWN              &kp UP                 &kp RIGHT          &trans         &kp TILDE
 &trans      &kp F6        &kp F7        &kp F8        &kp F9        &kp F10       &mo 3     &studio_unlock  &kp LEFT_BRACKET  &kp LEFT_PARENTHESIS  &kp RIGHT_PARENTHESIS  &kp RIGHT_BRACKET  &kp BACKSLASH  &trans
                                                       &trans        &trans        &trans    &kp DELETE      &trans            &trans
-                                                                                  &trans    &trans
+                                                      &none         &none
             >;
         };
 
@@ -65,7 +65,7 @@
 &trans  &kp AT  &kp HASH   &kp DOLLAR  &trans  &trans                    &kp EXCL       &trans  &trans  &trans  &trans       &trans
 &trans  &trans  &kp ASTRK  &kp CARET   &trans  &trans  &trans    &trans  &kp AMPERSAND  &trans  &trans  &trans  &trans       &trans
                                        &trans  &trans  &trans    &trans  &trans         &trans
-                                                       &trans    &trans
+                                                      &none         &none
             >;
         };
 
@@ -75,20 +75,23 @@
 &bt BT_CLR_ALL  &trans        &trans        &trans        &trans        &trans                          &trans  &trans  &trans  &trans  &trans  &trans
 &trans          &trans        &trans        &trans        &trans        &trans        &trans    &trans  &trans  &trans  &trans  &trans  &trans  &trans
                                                           &trans        &trans        &trans    &trans  &trans  &trans
-                                                                                      &trans    &trans
+                                                      &none               &none
             >;
         };
 
-        /* Auto-activated while either TrackPoint moves (see zip_temp_layer in overlay). */
-
+        /*
+         * Auto-activated while either TrackPoint moves (zip_temp_layer in overlay).
+         * Cursor motion comes from the LPPS listeners; use &mmv / &msc / &mkp on keys here
+         * (including the two panel slots) for clicks, nudges, and scroll while pointing.
+         */
         trackpoint_layer {
             display-name = "TrackPoint";
             bindings = <
-&trans  &trans  &trans  &trans  &trans    &trans                          &trans    &trans    &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans    &trans                          &trans    &trans    &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans    &trans    &trans      &trans    &trans    &trans    &trans  &trans  &trans  &trans
-                                &mkp MB2  &mkp MB3  &mkp MB1    &mkp MB1  &mkp MB3  &mkp MB2
-                                                    &mkp MB1    &mkp MB1
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &mmv MOVE_LEFT  &mmv MOVE_DOWN  &mmv MOVE_UP  &mmv MOVE_RIGHT  &trans              &mmv MOVE_LEFT  &mmv MOVE_DOWN  &mmv MOVE_UP  &mmv MOVE_RIGHT  &trans  &trans
+&trans  &msc SCRL_LEFT  &msc SCRL_DOWN  &msc SCRL_UP  &msc SCRL_RIGHT  &trans  &trans    &msc SCRL_LEFT  &msc SCRL_DOWN  &msc SCRL_UP  &msc SCRL_RIGHT  &trans  &trans  &trans
+                                       &mkp LCLK  &mkp MCLK  &mkp RCLK    &mkp LCLK  &mkp RCLK  &trans
+                                                      &mmv MOVE_UP       &msc SCRL_DOWN
             >;
         };
     };
