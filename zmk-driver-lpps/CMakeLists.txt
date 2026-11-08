@@ -1,4 +1,6 @@
 if(CONFIG_LPPS)
+    # Built via ZMK_EXTRA_MODULES; pick up ZMK app headers (drivers/behavior.h, etc.).
+    zephyr_include_directories(${CMAKE_SOURCE_DIR}/include)
     zephyr_library()
     zephyr_library_sources(src/lpps.c)
     zephyr_library_sources(src/trackpoint_control.c)
