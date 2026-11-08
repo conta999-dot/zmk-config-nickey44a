@@ -2,6 +2,7 @@
 #include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
 
 #include "nickey44a.dtsi"
+#include <behaviors/trackpoint-control.dtsi>
 
 / {
     pointing_listener: pointing_listener {

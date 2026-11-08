@@ -2,7 +2,6 @@
 #include <dt-bindings/zmk/matrix_transform.h>
 #include <input/processors.dtsi>
 #include <physical_layouts.dtsi>
-#include <behaviors/trackpoint-control.dtsi>
 
 / {
     chosen {
