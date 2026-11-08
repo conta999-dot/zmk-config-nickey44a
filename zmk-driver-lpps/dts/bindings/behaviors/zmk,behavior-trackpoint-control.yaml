@@ -2,11 +2,4 @@ description: TrackPoint Control (keymap metadata for LTP/RTP panel slots)
 
 compatible: "zmk,behavior-trackpoint-control"
 
-include: behavior.yaml
-
-properties:
-  "#binding-cells":
-    const: 1
-
-binding cell:type: int
-binding cell-type: int
+include: one_param.yaml
