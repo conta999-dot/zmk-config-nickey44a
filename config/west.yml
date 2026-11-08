@@ -17,7 +17,6 @@ manifest:
       remote: caksoylar
       revision: 8756cb7b8114069fa3c25c6f6c990f24988fceff # v0.3
     - name: zmk-driver-lpps
-      remote: sekigon-gonnoc
-      revision: 7a4a67c3868edbe53fce5b96c5085336705efbd2
+      path: ../zmk-driver-lpps
   self:
     path: config

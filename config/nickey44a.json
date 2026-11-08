@@ -53,8 +53,8 @@
         { "row": 4, "col":  9, "x":  9, "y": 4 },
         { "row": 4, "col":  10, "x": 10, "y": 4 },
 
-        { "row": 5, "col":  6, "x": 6, "y": 2, "label": "TP" },
-        { "row": 5, "col":  8, "x": 8, "y": 2, "label": "TP" }
+        { "row": 5, "col":  6, "x": 6, "y": 2, "label": "LTP" },
+        { "row": 5, "col":  8, "x": 8, "y": 2, "label": "RTP" }
       ]
     }
   },
