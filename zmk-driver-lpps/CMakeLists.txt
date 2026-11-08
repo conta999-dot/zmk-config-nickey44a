@@ -5,7 +5,6 @@ if(CONFIG_LPPS)
     zephyr_library_sources(src/lpps.c)
     zephyr_library_sources(src/behaviors/behavior_lpps_calibration.c)
     zephyr_library_sources_ifdef(CONFIG_ZMK_SPLIT_ROLE_CENTRAL src/trackpoint_control.c)
-    zephyr_library_sources_ifdef(CONFIG_ZMK_SPLIT_ROLE_CENTRAL
-                                 src/behaviors/behavior_trackpoint_control.c)
+    zephyr_library_sources(src/behaviors/behavior_trackpoint_control.c)
     zephyr_library_include_directories(${CMAKE_CURRENT_LIST_DIR}/include)
 endif()
