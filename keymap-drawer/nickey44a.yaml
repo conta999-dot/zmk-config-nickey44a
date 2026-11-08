@@ -1,7 +1,7 @@
 layout: {zmk_keyboard: nickey44a}
 layers:
-  default: [TAB, Q, W, E, R, T, Y, U, I, O, P, '''', LCTRL, A, S, D, F, G, H, J, K, L, ;, '-', LSHFT, Z, X, C, V, B, LEFT WIN, DELETE, N, M, ',', ., /, '=', '2',
-    '1', SPACE, BSPC, RET, RALT, LTP, RTP]
+  default: [TAB, Q, W, E, R, T, Y, U, I, O, P, '@', RSHIFT, A, S, D, F, G, H, J, K, L, ;, '-', LCTRL, Z, X, C, V, B, LEFT WIN, B, N, M, ',', ., /, '=', '2', '1',
+    SPACE, BSPC, RET, RALT, '&tpc MOUSE_MOVE', '&tpc MOUSE_MOVE']
   '1':
   - ESCAPE
   - '1'
@@ -14,33 +14,33 @@ layers:
   - '8'
   - '9'
   - '0'
-  - '`'
+  - ''''
   - {t: ▽, type: trans}
   - F1
   - F2
   - F3
   - F4
   - F5
-  - LEFT
-  - DOWN
-  - UP
-  - RIGHT
-  - {t: ▽, type: trans}
-  - '~'
-  - {t: ▽, type: trans}
   - F6
   - F7
   - F8
   - F9
   - F10
-  - '3'
-  - '&studio_unlock'
+  - '~'
+  - {t: ▽, type: trans}
   - '['
+  - ']'
   - (
   - )
-  - ']'
+  - '|'
+  - '3'
+  - '&studio_unlock'
+  - LEFT ARROW
+  - UP ARROW
+  - DOWN ARROW
+  - RIGHT ARROW
   - \
-  - {t: ▽, type: trans}
+  - Ctl+`
   - {t: ▽, type: trans}
   - {type: held}
   - {t: ▽, type: trans}
