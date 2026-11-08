@@ -114,8 +114,7 @@
         device = <&left_trackpoint_split>;
         input-processors = <&zip_temp_layer 4 400>,
                            <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
-                           <&zip_xy_scaler 1 2>,
-                           <&zip_tpc_mode 0>;
+                           <&zip_xy_scaler 1 2>;
 
         mo2_scroll {
             layers = <2>;
