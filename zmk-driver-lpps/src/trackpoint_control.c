@@ -12,6 +12,7 @@
 #include <dt-bindings/zmk/trackpoint_control.h>
 #include <string.h>
 
+#include <zmk/behavior.h>
 #include <zmk/keymap.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
