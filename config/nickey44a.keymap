@@ -95,11 +95,11 @@
 
         layer_5 {
             bindings = <
-&trans  &trans  &trans  &trans          &kp DOWN_ARROW  &trans                             &trans          &kp UP_ARROW    &trans           &trans  &trans  &trans
-&trans  &trans  &trans  &kp LEFT_ARROW  &kp DOWN_ARROW  &kp RIGHT_ARROW                    &kp LEFT_ARROW  &kp DOWN_ARROW  &kp RIGHT_ARROW  &trans  &trans  &trans
-&trans  &trans  &trans  &trans          &trans          &trans           &trans    &trans  &trans          &trans          &trans           &trans  &trans  &trans
-                                        &trans          &trans           &trans    &trans  &trans          &trans
-                                                                         &trans    &trans
+&trans  &trans  &trans          &kp UP_ARROW    &trans           &kp PAGE_UP                      &kp PAGE_UP    &trans          &kp UP_ARROW    &trans           &trans  &trans
+&trans  &trans  &kp LEFT_ARROW  &kp DOWN_ARROW  &kp RIGHT_ARROW  &kp PAGE_DOWN                    &kp PAGE_DOWN  &kp LEFT_ARROW  &kp DOWN_ARROW  &kp RIGHT_ARROW  &trans  &trans
+&trans  &trans  &trans          &trans          &trans           &trans         &trans    &trans  &trans         &trans          &trans          &trans           &trans  &trans
+                                                &trans           &trans         &trans    &trans  &trans         &trans
+                                                                                &trans    &trans
             >;
         };
     };
