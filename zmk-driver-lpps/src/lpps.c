@@ -21,6 +21,9 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
 
 #define DT_DRV_COMPAT lpps
 
+/* Per-axis: values in [-N, N] are treated as noise/drift and not reported. */
+#define LPPS_DEADZONE 2
+
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
 struct lpps_config {
@@ -149,12 +152,23 @@ static void lpps_motion_work_handler(struct k_work *work) {
     ret = i2c_read_dt(&cfg->i2c, transfer_bytes, sizeof(transfer_bytes));
     LOG_DBG("I2C read: data=%02X %02X %02X", transfer_bytes[0], transfer_bytes[1],
             transfer_bytes[2]);
+    if (ret < 0) {
+        LOG_ERR("I2C read failed: %d", ret);
+        lpps_interrupt_enable_when_inactive(data);
+        return;
+    }
+
     int8_t x = (int8_t)transfer_bytes[0];
     int8_t y = (int8_t)transfer_bytes[1];
     int8_t z = (int8_t)transfer_bytes[2];
 
-    if (ret < 0) {
-        LOG_ERR("I2C read failed: %d", ret);
+    if (abs(x) <= LPPS_DEADZONE) {
+        x = 0;
+    }
+    if (abs(y) <= LPPS_DEADZONE) {
+        y = 0;
+    }
+    if (x == 0 && y == 0) {
         lpps_interrupt_enable_when_inactive(data);
         return;
     }
