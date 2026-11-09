@@ -22,11 +22,13 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
 #define DT_DRV_COMPAT lpps
 
 /*
- * LPPS often reports one count per IRQ (|delta| is 1–2). Do not discard each
- * sample inside [-N, N] — accumulate and report when |accum| >= N or a sample
- * exceeds N.
+ * LPPS often reports one count per IRQ (|delta| is 1–2). Accumulate; report when
+ * |accum| >= LPPS_ACCUM_REPORT or |sample| > LPPS_ACCUM_REPORT. Isolated ±1–2
+ * noise ("twitching") usually cancels in the accumulator before the threshold.
  */
-#define LPPS_DEADZONE 2
+#define LPPS_ACCUM_REPORT 3
+/* Reset accumulated noise if no IRQ for this long (ms). */
+#define LPPS_ACCUM_IDLE_MS 45
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
@@ -44,6 +46,7 @@ struct lpps_data {
     atomic_t behavior_calibration_pending;
     int16_t accum_x;
     int16_t accum_y;
+    int64_t last_motion_ms;
 };
 
 static int lpps_i2c_read_reg(const struct device *dev, uint8_t reg, uint8_t *data, uint8_t len) {
@@ -168,16 +171,25 @@ static void lpps_motion_work_handler(struct k_work *work) {
     int8_t y = (int8_t)transfer_bytes[1];
     int8_t z = (int8_t)transfer_bytes[2];
 
+    if ((current_time - data->last_motion_ms) > LPPS_ACCUM_IDLE_MS) {
+        data->accum_x = 0;
+        data->accum_y = 0;
+    }
+    data->last_motion_ms = current_time;
+
     data->accum_x += x;
     data->accum_y += y;
 
     // close i2c bus of module (required every motion IRQ, even when not reporting)
     ret = lpps_i2c_read_reg(dev, 0, transfer_bytes, 1);
 
-    const bool strong_sample = (x > LPPS_DEADZONE || x < -LPPS_DEADZONE || y > LPPS_DEADZONE ||
-                                y < -LPPS_DEADZONE);
-    const bool accum_ready = (data->accum_x >= LPPS_DEADZONE || data->accum_x <= -LPPS_DEADZONE ||
-                            data->accum_y >= LPPS_DEADZONE || data->accum_y <= -LPPS_DEADZONE);
+    const bool strong_sample =
+        (x > LPPS_ACCUM_REPORT || x < -LPPS_ACCUM_REPORT || y > LPPS_ACCUM_REPORT ||
+         y < -LPPS_ACCUM_REPORT);
+    const bool accum_ready = (data->accum_x >= LPPS_ACCUM_REPORT ||
+                              data->accum_x <= -LPPS_ACCUM_REPORT ||
+                              data->accum_y >= LPPS_ACCUM_REPORT ||
+                              data->accum_y <= -LPPS_ACCUM_REPORT);
 
     if (strong_sample || accum_ready) {
         const int8_t ox = (int8_t)CLAMP(data->accum_x, -127, 127);
@@ -238,6 +250,7 @@ static int lpps_init(const struct device *dev) {
     atomic_set(&data->behavior_calibration_pending, 0);
     data->accum_x = 0;
     data->accum_y = 0;
+    data->last_motion_ms = 0;
 
 #if DT_INST_NODE_HAS_PROP(0, power_gpios)
     if (gpio_is_ready_dt(&cfg->power_gpio)) {
