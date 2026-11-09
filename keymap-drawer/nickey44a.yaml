@@ -1,7 +1,52 @@
 layout: {zmk_keyboard: nickey44a}
 layers:
-  default: [TAB, Q, W, E, R, T, Y, U, I, O, P, '@', RSHIFT, A, S, D, F, G, H, J, K, L, ;, '-', LCTRL, Z, X, C, V, B, LEFT WIN, B, N, M, ',', ., /, '=', '2', '1',
-    SPACE, BSPC, RET, RALT, '&tpc MOUSE_MOVE', '&tpc MOUSE_MOVE']
+  default:
+  - TAB
+  - Q
+  - W
+  - E
+  - R
+  - T
+  - Y
+  - U
+  - I
+  - O
+  - P
+  - '@'
+  - RSHIFT
+  - A
+  - S
+  - D
+  - F
+  - G
+  - H
+  - J
+  - K
+  - L
+  - ;
+  - '-'
+  - LCTRL
+  - Z
+  - X
+  - C
+  - V
+  - B
+  - LEFT WIN
+  - B
+  - N
+  - M
+  - ','
+  - .
+  - /
+  - '='
+  - {t: LANGUAGE 1, h: '2'}
+  - '1'
+  - SPACE
+  - BSPC
+  - RET
+  - {t: LANGUAGE 2, h: '3'}
+  - '&tpc MOUSE_MOVE'
+  - '&tpc MOUSE_MOVE'
   '1':
   - ESCAPE
   - '1'
@@ -127,20 +172,20 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
   - {type: held}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {type: held}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   TrackPoint:
