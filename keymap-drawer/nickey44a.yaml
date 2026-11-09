@@ -238,14 +238,14 @@ layers:
   '5':
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - '&msc SCRL_LEFT'
   - UP ARROW
-  - {t: ▽, type: trans}
+  - '&msc SCRL_RIGHT'
   - PAGE UP
   - PAGE UP
-  - {t: ▽, type: trans}
+  - '&msc SCRL_LEFT'
   - UP ARROW
-  - {t: ▽, type: trans}
+  - '&msc SCRL_RIGHT'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
