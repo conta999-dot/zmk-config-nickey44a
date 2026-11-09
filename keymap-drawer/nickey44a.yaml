@@ -40,9 +40,9 @@ layers:
   - /
   - '='
   - {t: LANGUAGE 1, h: '2'}
-  - '1'
   - SPACE
-  - BSPC
+  - {t: DELETE, h: '1'}
+  - {t: BACKSPACE, h: '5'}
   - RET
   - {t: LANGUAGE 2, h: '3'}
   - '&tpc MOUSE_MOVE'
@@ -87,8 +87,8 @@ layers:
   - \
   - Ctl+`
   - {t: ▽, type: trans}
-  - {type: held}
   - {t: ▽, type: trans}
+  - {type: held}
   - DELETE
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -233,5 +233,52 @@ layers:
   - '&mkp MB1'
   - '&mkp MB3'
   - '&mkp MB2'
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  '5':
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - DOWN ARROW
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - UP ARROW
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - LEFT ARROW
+  - DOWN ARROW
+  - RIGHT ARROW
+  - LEFT ARROW
+  - DOWN ARROW
+  - RIGHT ARROW
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {type: held}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
