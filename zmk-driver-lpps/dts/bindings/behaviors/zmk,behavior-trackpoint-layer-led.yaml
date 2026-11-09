@@ -1,0 +1,5 @@
+description: Solid RGB LED for auto TrackPoint layer (split peripheral sync)
+
+compatible: "zmk,behavior-trackpoint-layer-led"
+
+include: one_param.yaml

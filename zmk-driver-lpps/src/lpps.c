@@ -26,9 +26,9 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
  * |accum| >= LPPS_ACCUM_REPORT or |sample| > LPPS_ACCUM_REPORT. Isolated ±1–2
  * noise ("twitching") usually cancels in the accumulator before the threshold.
  */
-#define LPPS_ACCUM_REPORT 3
+#define LPPS_ACCUM_REPORT 5
 /* Reset accumulated noise if no IRQ for this long (ms). */
-#define LPPS_ACCUM_IDLE_MS 45
+#define LPPS_ACCUM_IDLE_MS 50
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
