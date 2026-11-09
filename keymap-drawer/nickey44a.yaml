@@ -239,9 +239,10 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
+  - UP ARROW
   - {t: ▽, type: trans}
-  - DOWN ARROW
-  - {t: ▽, type: trans}
+  - PAGE UP
+  - PAGE UP
   - {t: ▽, type: trans}
   - UP ARROW
   - {t: ▽, type: trans}
@@ -249,15 +250,14 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
   - LEFT ARROW
   - DOWN ARROW
   - RIGHT ARROW
+  - PAGE DOWN
+  - PAGE DOWN
   - LEFT ARROW
   - DOWN ARROW
   - RIGHT ARROW
-  - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
