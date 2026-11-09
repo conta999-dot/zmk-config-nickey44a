@@ -39,12 +39,12 @@ layers:
   - .
   - /
   - '='
-  - {t: LANGUAGE 1, h: '2'}
+  - {t: LANGUAGE 2, h: '2'}
   - SPACE
-  - {t: DELETE, h: '1'}
+  - {t: LANGUAGE 1, h: '1'}
   - {t: BACKSPACE, h: '5'}
   - RET
-  - {t: LANGUAGE 2, h: '3'}
+  - {t: LANGUAGE 1, h: '3'}
   - '&tpc MOUSE_MOVE'
   - '&tpc MOUSE_MOVE'
   '1':
