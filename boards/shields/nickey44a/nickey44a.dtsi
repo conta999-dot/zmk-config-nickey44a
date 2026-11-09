@@ -103,11 +103,9 @@
     };
 
     /*
-     * Left TrackPoint events arrive on left_trackpoint_split.
-     * Process them once, on the central, with the same chain as the right
-     * listener. The peripheral forwards raw driver events and has no listener.
-     * Axis signs match the right half until a hardware test shows the left
-     * mounting needs its own inversion.
+     * Left TrackPoint may use left_trackpoint_split (peripheral) + this listener (central).
+     * Left half overlay disables the sensor; central overlay keeps this listener off until
+     * left TP is re-enabled. Right pointing_listener drives Layer 4 via zip_temp_layer.
      */
     left_pointing_listener: left_pointing_listener {
         compatible = "zmk,input-listener";
