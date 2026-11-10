@@ -26,12 +26,6 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
  * reported unchanged every IRQ (upstream sekigon-gonnoc behavior).
  */
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
-#define LPPS_ACCUM_REPORT 8
-#define LPPS_INSTANT_REPORT 12
-#define LPPS_ACCUM_IDLE_MS 40
-#endif
-
-#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
 static inline int16_t lpps_apply_sign_deadzone(int16_t accum, int8_t sample) {
     if (sample == 0 || accum == 0) {
         return accum;
@@ -190,7 +184,7 @@ static void lpps_motion_work_handler(struct k_work *work) {
     ret = lpps_i2c_read_reg(dev, 0, transfer_bytes, 1);
 
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
-    if ((current_time - data->last_motion_ms) > LPPS_ACCUM_IDLE_MS) {
+    if ((current_time - data->last_motion_ms) > CONFIG_LPPS_ACCUM_IDLE_MS) {
         data->accum_x = 0;
         data->accum_y = 0;
     }
@@ -201,12 +195,12 @@ static void lpps_motion_work_handler(struct k_work *work) {
     data->accum_x += x;
     data->accum_y += y;
 
-    const bool strong_sample = (x >= LPPS_INSTANT_REPORT || x <= -LPPS_INSTANT_REPORT ||
-                                y >= LPPS_INSTANT_REPORT || y <= -LPPS_INSTANT_REPORT);
-    const bool accum_ready = (data->accum_x >= LPPS_ACCUM_REPORT ||
-                              data->accum_x <= -LPPS_ACCUM_REPORT ||
-                              data->accum_y >= LPPS_ACCUM_REPORT ||
-                              data->accum_y <= -LPPS_ACCUM_REPORT);
+    const bool strong_sample = (x >= CONFIG_LPPS_INSTANT_REPORT || x <= -CONFIG_LPPS_INSTANT_REPORT ||
+                                y >= CONFIG_LPPS_INSTANT_REPORT || y <= -CONFIG_LPPS_INSTANT_REPORT);
+    const bool accum_ready = (data->accum_x >= CONFIG_LPPS_ACCUM_REPORT ||
+                              data->accum_x <= -CONFIG_LPPS_ACCUM_REPORT ||
+                              data->accum_y >= CONFIG_LPPS_ACCUM_REPORT ||
+                              data->accum_y <= -CONFIG_LPPS_ACCUM_REPORT);
 
     if (strong_sample || accum_ready) {
         const int8_t ox = (int8_t)CLAMP(data->accum_x, -127, 127);
