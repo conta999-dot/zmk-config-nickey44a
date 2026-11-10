@@ -238,27 +238,27 @@ layers:
   '5':
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - '&msc SCRL_LEFT'
-  - UP ARROW
-  - '&msc SCRL_RIGHT'
-  - PAGE UP
-  - PAGE UP
-  - '&msc SCRL_LEFT'
-  - UP ARROW
-  - '&msc SCRL_RIGHT'
   - '&tp_left_ctl 1'
+  - UP ARROW
+  - '&msc SCRL_RIGHT'
+  - PAGE UP
+  - PAGE UP
+  - '&msc SCRL_LEFT'
+  - UP ARROW
+  - '&msc SCRL_RIGHT'
+  - '&tp_left_ctl 3'
   - '&tp_left_ctl'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - LEFT ARROW
-  - DOWN ARROW
-  - RIGHT ARROW
-  - PAGE DOWN
-  - PAGE DOWN
-  - LEFT ARROW
-  - DOWN ARROW
-  - RIGHT ARROW
   - '&tp_left_ctl 2'
+  - DOWN ARROW
+  - RIGHT ARROW
+  - PAGE DOWN
+  - PAGE DOWN
+  - LEFT ARROW
+  - DOWN ARROW
+  - RIGHT ARROW
+  - '&tp_left_ctl 4'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - '&ps_calib'

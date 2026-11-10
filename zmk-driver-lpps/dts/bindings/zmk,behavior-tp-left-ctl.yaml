@@ -1,4 +1,4 @@
-description: Central control for left split TrackPoint (0=toggle, 1=N+, 2=N-)
+description: Central TrackPoint control (0=toggle, 1/2=left N±, 3/4=right N±)
 
 compatible: "zmk,behavior-tp-left-ctl"
 

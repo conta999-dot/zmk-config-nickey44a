@@ -2,8 +2,10 @@
  * SPDX-License-Identifier: MIT
  *
  * Central: drop left split TrackPoint input when disabled; push runtime N to left;
- * Layer-5 shortcuts via &tp_left_ctl (@ toggle, P N+, ; N-).
+ * Layer-5 shortcuts via &tp_left_ctl (W/S left N±, P/; right N±, @ toggle).
  */
+
+#include <lpps.h>
 
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
@@ -25,18 +27,22 @@
 #include <zmk_rgbled_widget/widget.h>
 #endif
 
-#define TP_LEFT_CTL_TOGGLE 0
-#define TP_LEFT_CTL_N_UP   1
-#define TP_LEFT_CTL_N_DOWN 2
+#define TP_CTL_TOGGLE       0
+#define TP_CTL_LEFT_N_UP    1
+#define TP_CTL_LEFT_N_DOWN  2
+#define TP_CTL_RIGHT_N_UP   3
+#define TP_CTL_RIGHT_N_DOWN 4
 
-#define TP_LEFT_N_MIN 1
-#define TP_LEFT_N_MAX 127
-#define TP_LEFT_N_DEFAULT 20
+#define TP_N_MIN 1
+#define TP_N_MAX 127
+#define TP_LEFT_N_DEFAULT  20
+#define TP_RIGHT_N_DEFAULT CONFIG_LPPS_ACCUM_REPORT
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 
 static bool left_tp_enabled = true;
 static int left_tp_accum_n = TP_LEFT_N_DEFAULT;
+static int right_tp_accum_n = TP_RIGHT_N_DEFAULT;
 
 static struct k_work_delayable led_restore_work;
 
@@ -125,13 +131,16 @@ static int push_n_to_left_peripheral(void) {
 #endif
 }
 
-static int save_left_tp_settings(void) {
+static int save_trackpoint_settings(void) {
 #if IS_ENABLED(CONFIG_SETTINGS)
     settings_save_one("trackpoint/left_en", &left_tp_enabled, sizeof(left_tp_enabled));
     settings_save_one("trackpoint/left_n", &left_tp_accum_n, sizeof(left_tp_accum_n));
+    settings_save_one("trackpoint/right_n", &right_tp_accum_n, sizeof(right_tp_accum_n));
 #endif
     return 0;
 }
+
+static void apply_right_tp_accum_n(void) { lpps_set_accum_report(right_tp_accum_n); }
 
 bool zmk_left_trackpoint_is_enabled(void) { return left_tp_enabled; }
 
@@ -174,24 +183,40 @@ static int on_tp_left_ctl_pressed(struct zmk_behavior_binding *binding,
     ARG_UNUSED(event);
 
     switch (binding->param1) {
-    case TP_LEFT_CTL_TOGGLE:
+    case TP_CTL_TOGGLE:
         left_tp_enabled = !left_tp_enabled;
-        save_left_tp_settings();
+        save_trackpoint_settings();
         return ZMK_BEHAVIOR_OPAQUE;
-    case TP_LEFT_CTL_N_UP:
-        if (left_tp_accum_n < TP_LEFT_N_MAX) {
+    case TP_CTL_LEFT_N_UP:
+        if (left_tp_accum_n < TP_N_MAX) {
             left_tp_accum_n++;
         }
-        save_left_tp_settings();
+        save_trackpoint_settings();
         push_n_to_left_peripheral();
         flash_led_brief(1);
         return ZMK_BEHAVIOR_OPAQUE;
-    case TP_LEFT_CTL_N_DOWN:
-        if (left_tp_accum_n > TP_LEFT_N_MIN) {
+    case TP_CTL_LEFT_N_DOWN:
+        if (left_tp_accum_n > TP_N_MIN) {
             left_tp_accum_n--;
         }
-        save_left_tp_settings();
+        save_trackpoint_settings();
         push_n_to_left_peripheral();
+        flash_led_brief(2);
+        return ZMK_BEHAVIOR_OPAQUE;
+    case TP_CTL_RIGHT_N_UP:
+        if (right_tp_accum_n < TP_N_MAX) {
+            right_tp_accum_n++;
+        }
+        save_trackpoint_settings();
+        apply_right_tp_accum_n();
+        flash_led_brief(1);
+        return ZMK_BEHAVIOR_OPAQUE;
+    case TP_CTL_RIGHT_N_DOWN:
+        if (right_tp_accum_n > TP_N_MIN) {
+            right_tp_accum_n--;
+        }
+        save_trackpoint_settings();
+        apply_right_tp_accum_n();
         flash_led_brief(2);
         return ZMK_BEHAVIOR_OPAQUE;
     default:
@@ -231,12 +256,13 @@ static int trackpoint_left_settings_set(const char *name, size_t len, settings_r
     } else if (settings_name_steq(name, "left_n", NULL)) {
         if (len == sizeof(left_tp_accum_n)) {
             read_cb(cb_arg, &left_tp_accum_n, len);
-            if (left_tp_accum_n < TP_LEFT_N_MIN) {
-                left_tp_accum_n = TP_LEFT_N_MIN;
-            }
-            if (left_tp_accum_n > TP_LEFT_N_MAX) {
-                left_tp_accum_n = TP_LEFT_N_MAX;
-            }
+            left_tp_accum_n = CLAMP(left_tp_accum_n, TP_N_MIN, TP_N_MAX);
+        }
+    } else if (settings_name_steq(name, "right_n", NULL)) {
+        if (len == sizeof(right_tp_accum_n)) {
+            read_cb(cb_arg, &right_tp_accum_n, len);
+            right_tp_accum_n = CLAMP(right_tp_accum_n, TP_N_MIN, TP_N_MAX);
+            apply_right_tp_accum_n();
         }
     }
     return 0;
@@ -249,6 +275,7 @@ SETTINGS_STATIC_HANDLER_DEFINE(trackpoint_left, "trackpoint", NULL, trackpoint_l
 
 static int trackpoint_left_central_init(void) {
     k_work_init_delayable(&led_restore_work, led_restore_work_handler);
+    apply_right_tp_accum_n();
     push_n_to_left_peripheral();
     return 0;
 }
