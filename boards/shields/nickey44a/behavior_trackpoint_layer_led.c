@@ -19,19 +19,25 @@ static const uint8_t rgb_idx[] = {DT_NODE_CHILD_IDX(DT_ALIAS(led_red)),
                                   DT_NODE_CHILD_IDX(DT_ALIAS(led_green)),
                                   DT_NODE_CHILD_IDX(DT_ALIAS(led_blue))};
 
-static void set_led_red(bool on) {
+/* param1: 0 = off, 1 = red, 2 = blue */
+static void set_led_color(uint8_t color) {
     if (!device_is_ready(led_dev)) {
         return;
     }
 
-    if (on) {
+    led_off(led_dev, rgb_idx[0]);
+    led_off(led_dev, rgb_idx[1]);
+    led_off(led_dev, rgb_idx[2]);
+
+    switch (color) {
+    case 1:
         led_on(led_dev, rgb_idx[0]);
-        led_off(led_dev, rgb_idx[1]);
-        led_off(led_dev, rgb_idx[2]);
-    } else {
-        led_off(led_dev, rgb_idx[0]);
-        led_off(led_dev, rgb_idx[1]);
-        led_off(led_dev, rgb_idx[2]);
+        break;
+    case 2:
+        led_on(led_dev, rgb_idx[2]);
+        break;
+    default:
+        break;
     }
 }
 #else
@@ -43,7 +49,7 @@ static void set_led_red(bool on) {
 static int tpl_led_binding_pressed(struct zmk_behavior_binding *binding,
                                      struct zmk_behavior_binding_event event) {
     ARG_UNUSED(event);
-    set_led_red(binding->param1 != 0);
+    set_led_color((uint8_t)binding->param1);
     return ZMK_BEHAVIOR_OPAQUE;
 }
 

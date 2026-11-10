@@ -17,6 +17,8 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/atomic.h>
 
+#include <lpps.h>
+
 LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
 
 #define DT_DRV_COMPAT lpps
@@ -57,6 +59,24 @@ struct lpps_data {
     int64_t last_motion_ms;
 #endif
 };
+
+#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
+static int lpps_accum_report_runtime = CONFIG_LPPS_ACCUM_REPORT;
+
+int lpps_set_accum_report(int n) {
+    lpps_accum_report_runtime = CLAMP(n, 1, 127);
+    return lpps_accum_report_runtime;
+}
+
+int lpps_get_accum_report(void) { return lpps_accum_report_runtime; }
+#else
+int lpps_set_accum_report(int n) {
+    ARG_UNUSED(n);
+    return 8;
+}
+
+int lpps_get_accum_report(void) { return 8; }
+#endif
 
 static int lpps_i2c_read_reg(const struct device *dev, uint8_t reg, uint8_t *data, uint8_t len) {
     const struct lpps_config *cfg = dev->config;
@@ -197,10 +217,10 @@ static void lpps_motion_work_handler(struct k_work *work) {
 
     const bool strong_sample = (x >= CONFIG_LPPS_INSTANT_REPORT || x <= -CONFIG_LPPS_INSTANT_REPORT ||
                                 y >= CONFIG_LPPS_INSTANT_REPORT || y <= -CONFIG_LPPS_INSTANT_REPORT);
-    const bool accum_ready = (data->accum_x >= CONFIG_LPPS_ACCUM_REPORT ||
-                              data->accum_x <= -CONFIG_LPPS_ACCUM_REPORT ||
-                              data->accum_y >= CONFIG_LPPS_ACCUM_REPORT ||
-                              data->accum_y <= -CONFIG_LPPS_ACCUM_REPORT);
+    const bool accum_ready = (data->accum_x >= lpps_accum_report_runtime ||
+                              data->accum_x <= -lpps_accum_report_runtime ||
+                              data->accum_y >= lpps_accum_report_runtime ||
+                              data->accum_y <= -lpps_accum_report_runtime);
 
     if (strong_sample || accum_ready) {
         const int8_t ox = (int8_t)CLAMP(data->accum_x, -127, 127);
@@ -268,6 +288,7 @@ static int lpps_init(const struct device *dev) {
     k_work_init_delayable(&data->irq_reenable_work, lpps_irq_reenable_work_handler);
     atomic_set(&data->behavior_calibration_pending, 0);
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
+    lpps_accum_report_runtime = CONFIG_LPPS_ACCUM_REPORT;
     data->accum_x = 0;
     data->accum_y = 0;
     data->last_motion_ms = 0;

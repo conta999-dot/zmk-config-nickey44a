@@ -1,0 +1,5 @@
+description: Central control for left split TrackPoint (0=toggle, 1=N+, 2=N-)
+
+compatible: "zmk,behavior-tp-left-ctl"
+
+include: one_param.yaml

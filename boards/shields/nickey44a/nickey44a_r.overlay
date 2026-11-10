@@ -56,7 +56,8 @@
 
 &left_pointing_listener {
     status = "okay";
-    input-processors = <&zip_temp_layer 4 400>,
+    input-processors = <&zip_left_tp_gate>,
+                       <&zip_temp_layer 4 400>,
                        <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
                        <&zip_xy_scaler 1 2>,
                        <&zip_tpc_mode 0>;
