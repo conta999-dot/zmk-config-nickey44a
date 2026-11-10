@@ -1,5 +1,17 @@
 menuconfig LPPS
     bool "low power pointing stick"
-  select I2C
+    select I2C
     help
       Enable LPPS
+
+if LPPS
+
+config LPPS_JITTER_FILTER
+    bool "LPPS software jitter filter"
+    default n
+    help
+      When disabled, each motion IRQ reports raw x/y deltas (same as the upstream
+      sekigon-gonnoc driver). Use this for drift/jitter baseline testing.
+      When enabled, burst/streak/accum thresholds gate small noise before reporting.
+
+endif

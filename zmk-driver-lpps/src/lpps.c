@@ -22,20 +22,19 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
 #define DT_DRV_COMPAT lpps
 
 /*
- * LPPS usually emits small per-IRQ deltas (often ±1–2). Both keyboard halves use
- * this same driver (local LPPS on right, left via split after the same filter).
- *
- * Noise often looks like random ±1–2 IRQs; intentional moves are a burst of
- * same-sign samples. We gate reports on burst length + streak + accum threshold,
- * and insert a short cooldown between small aggregate reports to stop "twitching".
+ * Optional software jitter filter (CONFIG_LPPS_JITTER_FILTER). When off, x/y are
+ * reported unchanged every IRQ (upstream sekigon-gonnoc behavior).
  */
+#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
 #define LPPS_ACCUM_REPORT 16
 #define LPPS_INSTANT_REPORT 10
 #define LPPS_ACCUM_IDLE_MS 60
 #define LPPS_MOTION_BURST_MIN 5
 #define LPPS_STREAK_MIN 4
 #define LPPS_REPORT_COOLDOWN_MS 35
+#endif
 
+#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
 static inline int16_t lpps_apply_sign_deadzone(int16_t accum, int8_t sample) {
     if (sample == 0 || accum == 0) {
         return accum;
@@ -45,6 +44,7 @@ static inline int16_t lpps_apply_sign_deadzone(int16_t accum, int8_t sample) {
     }
     return accum;
 }
+#endif
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
@@ -60,6 +60,7 @@ struct lpps_data {
     struct k_work_delayable irq_reenable_work;
     struct gpio_callback motion_cb;
     atomic_t behavior_calibration_pending;
+#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
     int16_t accum_x;
     int16_t accum_y;
     int64_t last_motion_ms;
@@ -69,8 +70,10 @@ struct lpps_data {
     uint8_t streak_y;
     int8_t last_sign_x;
     int8_t last_sign_y;
+#endif
 };
 
+#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
 static inline void lpps_update_streak(uint8_t *streak, int8_t *last_sign, int8_t sample) {
     if (sample == 0) {
         return;
@@ -97,6 +100,7 @@ static inline void lpps_reset_motion_filter(struct lpps_data *data) {
     data->last_sign_x = 0;
     data->last_sign_y = 0;
 }
+#endif
 
 static int lpps_i2c_read_reg(const struct device *dev, uint8_t reg, uint8_t *data, uint8_t len) {
     const struct lpps_config *cfg = dev->config;
@@ -220,6 +224,10 @@ static void lpps_motion_work_handler(struct k_work *work) {
     int8_t y = (int8_t)transfer_bytes[1];
     int8_t z = (int8_t)transfer_bytes[2];
 
+    // close i2c bus of module (required every motion IRQ)
+    ret = lpps_i2c_read_reg(dev, 0, transfer_bytes, 1);
+
+#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
     if ((current_time - data->last_motion_ms) > LPPS_ACCUM_IDLE_MS) {
         lpps_reset_motion_filter(data);
     }
@@ -234,9 +242,6 @@ static void lpps_motion_work_handler(struct k_work *work) {
     data->accum_y += y;
     lpps_update_streak(&data->streak_x, &data->last_sign_x, x);
     lpps_update_streak(&data->streak_y, &data->last_sign_y, y);
-
-    // close i2c bus of module (required every motion IRQ, even when not reporting)
-    ret = lpps_i2c_read_reg(dev, 0, transfer_bytes, 1);
 
     const bool strong_x = (x >= LPPS_INSTANT_REPORT || x <= -LPPS_INSTANT_REPORT);
     const bool strong_y = (y >= LPPS_INSTANT_REPORT || y <= -LPPS_INSTANT_REPORT);
@@ -278,6 +283,14 @@ static void lpps_motion_work_handler(struct k_work *work) {
             data->last_report_ms = current_time;
         }
     }
+#else
+    ARG_UNUSED(current_time);
+    ARG_UNUSED(z);
+
+    LOG_DBG("Movement: x=%4d y=%4d z=%4d", x, y, z);
+    input_report_rel(dev, INPUT_REL_X, x, false, K_FOREVER);
+    input_report_rel(dev, INPUT_REL_Y, y, true, K_FOREVER);
+#endif
 
     lpps_interrupt_enable_when_inactive(data);
 }
@@ -324,6 +337,7 @@ static int lpps_init(const struct device *dev) {
     k_work_init(&data->motion_work, lpps_motion_work_handler);
     k_work_init_delayable(&data->irq_reenable_work, lpps_irq_reenable_work_handler);
     atomic_set(&data->behavior_calibration_pending, 0);
+#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
     data->accum_x = 0;
     data->accum_y = 0;
     data->last_motion_ms = 0;
@@ -333,6 +347,7 @@ static int lpps_init(const struct device *dev) {
     data->streak_y = 0;
     data->last_sign_x = 0;
     data->last_sign_y = 0;
+#endif
 
 #if DT_INST_NODE_HAS_PROP(0, power_gpios)
     if (gpio_is_ready_dt(&cfg->power_gpio)) {
