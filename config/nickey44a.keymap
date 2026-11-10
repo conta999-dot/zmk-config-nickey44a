@@ -98,7 +98,7 @@
             bindings = <
 &trans  &trans  &msc SCRL_LEFT  &kp UP_ARROW    &msc SCRL_RIGHT  &kp PAGE_UP                      &kp PAGE_UP    &msc SCRL_LEFT  &kp UP_ARROW    &msc SCRL_RIGHT  &trans  &trans
 &trans  &trans  &kp LEFT_ARROW  &kp DOWN_ARROW  &kp RIGHT_ARROW  &kp PAGE_DOWN                    &kp PAGE_DOWN  &kp LEFT_ARROW  &kp DOWN_ARROW  &kp RIGHT_ARROW  &trans  &trans
-&trans  &trans  &trans          &trans          &trans           &trans         &trans    &trans  &trans         &trans          &trans          &trans           &trans  &trans
+&trans  &ps_calib  &trans          &trans          &trans           &trans         &trans    &trans  &trans         &trans          &trans          &ps_calib           &trans  &trans
                                                 &trans           &trans         &trans    &trans  &trans         &trans
                                                                                 &trans    &trans
             >;
