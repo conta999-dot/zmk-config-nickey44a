@@ -242,11 +242,11 @@ layers:
   - UP ARROW
   - '&msc SCRL_RIGHT'
   - PAGE UP
-  - '&tp_left_ctl 1'
+  - PAGE UP
   - '&msc SCRL_LEFT'
   - UP ARROW
   - '&msc SCRL_RIGHT'
-  - {t: ▽, type: trans}
+  - '&tp_left_ctl 1'
   - '&tp_left_ctl'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -254,11 +254,11 @@ layers:
   - DOWN ARROW
   - RIGHT ARROW
   - PAGE DOWN
-  - '&tp_left_ctl 2'
+  - PAGE DOWN
   - LEFT ARROW
   - DOWN ARROW
   - RIGHT ARROW
-  - {t: ▽, type: trans}
+  - '&tp_left_ctl 2'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - '&ps_calib'

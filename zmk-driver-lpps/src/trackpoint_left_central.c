@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: MIT
  *
  * Central: drop left split TrackPoint input when disabled; push runtime N to left;
- * Layer-5 shortcuts via &tp_left_ctl (toggle / N+ / N-).
+ * Layer-5 shortcuts via &tp_left_ctl (@ toggle, P N+, ; N-).
  */
 
 #include <zephyr/device.h>
