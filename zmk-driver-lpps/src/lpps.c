@@ -26,12 +26,9 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
  * reported unchanged every IRQ (upstream sekigon-gonnoc behavior).
  */
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
-#define LPPS_ACCUM_REPORT 16
-#define LPPS_INSTANT_REPORT 10
-#define LPPS_ACCUM_IDLE_MS 60
-#define LPPS_MOTION_BURST_MIN 5
-#define LPPS_STREAK_MIN 4
-#define LPPS_REPORT_COOLDOWN_MS 35
+#define LPPS_ACCUM_REPORT 8
+#define LPPS_INSTANT_REPORT 12
+#define LPPS_ACCUM_IDLE_MS 40
 #endif
 
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
@@ -64,43 +61,8 @@ struct lpps_data {
     int16_t accum_x;
     int16_t accum_y;
     int64_t last_motion_ms;
-    int64_t last_report_ms;
-    uint8_t motion_burst;
-    uint8_t streak_x;
-    uint8_t streak_y;
-    int8_t last_sign_x;
-    int8_t last_sign_y;
 #endif
 };
-
-#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
-static inline void lpps_update_streak(uint8_t *streak, int8_t *last_sign, int8_t sample) {
-    if (sample == 0) {
-        return;
-    }
-
-    const int8_t sign = (sample > 0) ? 1 : -1;
-
-    if (*last_sign != 0 && sign != *last_sign) {
-        *streak = 0;
-    }
-
-    *last_sign = sign;
-    if (*streak < 255) {
-        (*streak)++;
-    }
-}
-
-static inline void lpps_reset_motion_filter(struct lpps_data *data) {
-    data->accum_x = 0;
-    data->accum_y = 0;
-    data->motion_burst = 0;
-    data->streak_x = 0;
-    data->streak_y = 0;
-    data->last_sign_x = 0;
-    data->last_sign_y = 0;
-}
-#endif
 
 static int lpps_i2c_read_reg(const struct device *dev, uint8_t reg, uint8_t *data, uint8_t len) {
     const struct lpps_config *cfg = dev->config;
@@ -229,59 +191,33 @@ static void lpps_motion_work_handler(struct k_work *work) {
 
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
     if ((current_time - data->last_motion_ms) > LPPS_ACCUM_IDLE_MS) {
-        lpps_reset_motion_filter(data);
+        data->accum_x = 0;
+        data->accum_y = 0;
     }
     data->last_motion_ms = current_time;
-    if (data->motion_burst < 255) {
-        data->motion_burst++;
-    }
 
     data->accum_x = lpps_apply_sign_deadzone(data->accum_x, x);
     data->accum_y = lpps_apply_sign_deadzone(data->accum_y, y);
     data->accum_x += x;
     data->accum_y += y;
-    lpps_update_streak(&data->streak_x, &data->last_sign_x, x);
-    lpps_update_streak(&data->streak_y, &data->last_sign_y, y);
 
-    const bool strong_x = (x >= LPPS_INSTANT_REPORT || x <= -LPPS_INSTANT_REPORT);
-    const bool strong_y = (y >= LPPS_INSTANT_REPORT || y <= -LPPS_INSTANT_REPORT);
-    const bool accum_ready_x = (data->accum_x >= LPPS_ACCUM_REPORT ||
-                                data->accum_x <= -LPPS_ACCUM_REPORT);
-    const bool accum_ready_y = (data->accum_y >= LPPS_ACCUM_REPORT ||
-                                data->accum_y <= -LPPS_ACCUM_REPORT);
-    const bool in_cooldown =
-        (current_time - data->last_report_ms) < LPPS_REPORT_COOLDOWN_MS;
-    const bool burst_ok = data->motion_burst >= LPPS_MOTION_BURST_MIN;
+    const bool strong_sample = (x >= LPPS_INSTANT_REPORT || x <= -LPPS_INSTANT_REPORT ||
+                                y >= LPPS_INSTANT_REPORT || y <= -LPPS_INSTANT_REPORT);
+    const bool accum_ready = (data->accum_x >= LPPS_ACCUM_REPORT ||
+                              data->accum_x <= -LPPS_ACCUM_REPORT ||
+                              data->accum_y >= LPPS_ACCUM_REPORT ||
+                              data->accum_y <= -LPPS_ACCUM_REPORT);
 
-    const bool report_x =
-        strong_x ||
-        (!in_cooldown && burst_ok && data->streak_x >= LPPS_STREAK_MIN && accum_ready_x);
-    const bool report_y =
-        strong_y ||
-        (!in_cooldown && burst_ok && data->streak_y >= LPPS_STREAK_MIN && accum_ready_y);
+    if (strong_sample || accum_ready) {
+        const int8_t ox = (int8_t)CLAMP(data->accum_x, -127, 127);
+        const int8_t oy = (int8_t)CLAMP(data->accum_y, -127, 127);
 
-    if (report_x || report_y) {
-        int8_t ox = 0;
-        int8_t oy = 0;
-
-        if (report_x) {
-            ox = (int8_t)CLAMP(data->accum_x, -127, 127);
-            data->accum_x -= ox;
-        }
-        if (report_y) {
-            oy = (int8_t)CLAMP(data->accum_y, -127, 127);
-            data->accum_y -= oy;
-        }
-
-        const bool accum_path = (report_x && !strong_x) || (report_y && !strong_y);
+        data->accum_x -= ox;
+        data->accum_y -= oy;
 
         LOG_DBG("Movement: x=%4d y=%4d z=%4d (report %d %d)", x, y, z, ox, oy);
         input_report_rel(dev, INPUT_REL_X, ox, false, K_FOREVER);
         input_report_rel(dev, INPUT_REL_Y, oy, true, K_FOREVER);
-
-        if (accum_path) {
-            data->last_report_ms = current_time;
-        }
     }
 #else
     ARG_UNUSED(current_time);
@@ -341,12 +277,6 @@ static int lpps_init(const struct device *dev) {
     data->accum_x = 0;
     data->accum_y = 0;
     data->last_motion_ms = 0;
-    data->last_report_ms = 0;
-    data->motion_burst = 0;
-    data->streak_x = 0;
-    data->streak_y = 0;
-    data->last_sign_x = 0;
-    data->last_sign_y = 0;
 #endif
 
 #if DT_INST_NODE_HAS_PROP(0, power_gpios)

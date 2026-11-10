@@ -8,7 +8,7 @@ if LPPS
 
 config LPPS_JITTER_FILTER
     bool "LPPS software jitter filter"
-    default n
+    default y
     help
       When disabled, each motion IRQ reports raw x/y deltas (same as the upstream
       sekigon-gonnoc driver). Use this for drift/jitter baseline testing.
