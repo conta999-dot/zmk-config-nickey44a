@@ -17,7 +17,7 @@
 #include <zmk/behavior.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/split_peripheral_status_changed.h>
-#include <zmk/input.h>
+#include <zephyr/input/input.h>
 #include <zmk/split/central.h>
 #include <zmk/split/bluetooth/peripheral.h>
 
