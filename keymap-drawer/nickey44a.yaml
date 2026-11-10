@@ -242,19 +242,19 @@ layers:
   - UP ARROW
   - '&msc SCRL_RIGHT'
   - PAGE UP
-  - PAGE UP
+  - '&tp_left_ctl 1'
   - '&msc SCRL_LEFT'
   - UP ARROW
   - '&msc SCRL_RIGHT'
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - '&tp_left_ctl'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - LEFT ARROW
   - DOWN ARROW
   - RIGHT ARROW
   - PAGE DOWN
-  - PAGE DOWN
+  - '&tp_left_ctl 2'
   - LEFT ARROW
   - DOWN ARROW
   - RIGHT ARROW
