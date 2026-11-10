@@ -1137,7 +1137,7 @@ path.combo {
 <g transform="translate(140, 28)" class="key keypos-2">
 <rect rx="6" ry="6" x="-26" y="-26" width="52" height="52" class="key"/>
 <text x="0" y="0" class="key tap">
-<tspan x="0" dy="-0.6em" style="font-size: 78%">&amp;msc</tspan><tspan x="0" dy="1.2em" style="font-size: 78%">SCRL_LEFT</tspan>
+<tspan x="0" dy="-0.6em" style="font-size: 64%">&amp;tp_left_c…</tspan><tspan x="0" dy="1.2em" style="font-size: 64%">1</tspan>
 </text>
 </g>
 <g transform="translate(196, 28)" class="key keypos-3">
@@ -1185,7 +1185,7 @@ path.combo {
 <g transform="translate(756, 28)" class="key keypos-10">
 <rect rx="6" ry="6" x="-26" y="-26" width="52" height="52" class="key"/>
 <text x="0" y="0" class="key tap">
-<tspan x="0" dy="-0.6em" style="font-size: 64%">&amp;tp_left_c…</tspan><tspan x="0" dy="1.2em" style="font-size: 64%">1</tspan>
+<tspan x="0" dy="-0.6em" style="font-size: 64%">&amp;tp_left_c…</tspan><tspan x="0" dy="1.2em" style="font-size: 64%">3</tspan>
 </text>
 </g>
 <g transform="translate(812, 28)" class="key keypos-11">
@@ -1203,7 +1203,7 @@ path.combo {
 <g transform="translate(140, 84)" class="key keypos-14">
 <rect rx="6" ry="6" x="-26" y="-26" width="52" height="52" class="key"/>
 <text x="0" y="0" class="key tap">
-<tspan x="0" dy="-0.6em">LEFT</tspan><tspan x="0" dy="1.2em">ARROW</tspan>
+<tspan x="0" dy="-0.6em" style="font-size: 64%">&amp;tp_left_c…</tspan><tspan x="0" dy="1.2em" style="font-size: 64%">2</tspan>
 </text>
 </g>
 <g transform="translate(196, 84)" class="key keypos-15">
@@ -1251,7 +1251,7 @@ path.combo {
 <g transform="translate(756, 84)" class="key keypos-22">
 <rect rx="6" ry="6" x="-26" y="-26" width="52" height="52" class="key"/>
 <text x="0" y="0" class="key tap">
-<tspan x="0" dy="-0.6em" style="font-size: 64%">&amp;tp_left_c…</tspan><tspan x="0" dy="1.2em" style="font-size: 64%">2</tspan>
+<tspan x="0" dy="-0.6em" style="font-size: 64%">&amp;tp_left_c…</tspan><tspan x="0" dy="1.2em" style="font-size: 64%">4</tspan>
 </text>
 </g>
 <g transform="translate(812, 84)" class="key trans keypos-23">
