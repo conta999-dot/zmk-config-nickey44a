@@ -22,13 +22,24 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
 #define DT_DRV_COMPAT lpps
 
 /*
- * LPPS often reports one count per IRQ (|delta| is 1–2). Accumulate; report when
- * |accum| >= LPPS_ACCUM_REPORT or |sample| > LPPS_ACCUM_REPORT. Isolated ±1–2
- * noise ("twitching") usually cancels in the accumulator before the threshold.
+ * LPPS usually emits small per-IRQ deltas (often ±1–2). Both keyboard halves use
+ * this same driver (local LPPS on right, left via split after the same filter).
  */
-#define LPPS_ACCUM_REPORT 5
+#define LPPS_ACCUM_REPORT 8
+/* Single-sample fast path only for deliberate flicks (not ±1–2 noise). */
+#define LPPS_INSTANT_REPORT 12
 /* Reset accumulated noise if no IRQ for this long (ms). */
-#define LPPS_ACCUM_IDLE_MS 50
+#define LPPS_ACCUM_IDLE_MS 40
+
+static inline int16_t lpps_apply_sign_deadzone(int16_t accum, int8_t sample) {
+    if (sample == 0 || accum == 0) {
+        return accum;
+    }
+    if ((accum > 0) != (sample > 0)) {
+        return 0;
+    }
+    return accum;
+}
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
@@ -177,15 +188,16 @@ static void lpps_motion_work_handler(struct k_work *work) {
     }
     data->last_motion_ms = current_time;
 
+    data->accum_x = lpps_apply_sign_deadzone(data->accum_x, x);
+    data->accum_y = lpps_apply_sign_deadzone(data->accum_y, y);
     data->accum_x += x;
     data->accum_y += y;
 
     // close i2c bus of module (required every motion IRQ, even when not reporting)
     ret = lpps_i2c_read_reg(dev, 0, transfer_bytes, 1);
 
-    const bool strong_sample =
-        (x > LPPS_ACCUM_REPORT || x < -LPPS_ACCUM_REPORT || y > LPPS_ACCUM_REPORT ||
-         y < -LPPS_ACCUM_REPORT);
+    const bool strong_sample = (x >= LPPS_INSTANT_REPORT || x <= -LPPS_INSTANT_REPORT ||
+                                y >= LPPS_INSTANT_REPORT || y <= -LPPS_INSTANT_REPORT);
     const bool accum_ready = (data->accum_x >= LPPS_ACCUM_REPORT ||
                               data->accum_x <= -LPPS_ACCUM_REPORT ||
                               data->accum_y >= LPPS_ACCUM_REPORT ||
