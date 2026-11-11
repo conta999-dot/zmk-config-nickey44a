@@ -8,9 +8,11 @@
 #include <lpps.h>
 #include <trackpoint_central.h>
 
+#include <zephyr/bluetooth/conn.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/led.h>
+#include <zephyr/input/input.h>
 #include <zephyr/kernel.h>
 #include <zephyr/settings/settings.h>
 
@@ -18,11 +20,7 @@
 #include <drivers/input_processor.h>
 
 #include <zmk/behavior.h>
-#include <zmk/event_manager.h>
-#include <zmk/events/split_peripheral_status_changed.h>
-#include <zephyr/input/input.h>
 #include <zmk/split/central.h>
-#include <zmk/split/bluetooth/peripheral.h>
 
 #if IS_ENABLED(CONFIG_RGBLED_WIDGET)
 #include <zmk_rgbled_widget/widget.h>
@@ -46,17 +44,19 @@ static int left_tp_accum_n = TP_LEFT_N_DEFAULT;
 static int right_tp_accum_n = TP_RIGHT_N_DEFAULT;
 
 static struct k_work_delayable led_restore_work;
+static struct k_work_delayable push_left_n_work;
 
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_NODELABEL(tpl_led))
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(tpl_led), okay)
 static const char *const tpl_led_name = DEVICE_DT_NAME(DT_NODELABEL(tpl_led));
 #endif
 
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_NODELABEL(lpps_set_accum))
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(lpps_set_accum), okay)
 static const char *const lpps_set_accum_name = DEVICE_DT_NAME(DT_NODELABEL(lpps_set_accum));
 #endif
 
 #if DT_NODE_EXISTS(DT_ALIAS(led_red))
-static const struct device *const central_led_dev = DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(gpio_leds));
+static const struct device *const central_led_dev =
+    DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(gpio_leds));
 static const uint8_t central_rgb_idx[] = {DT_NODE_CHILD_IDX(DT_ALIAS(led_red)),
                                           DT_NODE_CHILD_IDX(DT_ALIAS(led_green)),
                                           DT_NODE_CHILD_IDX(DT_ALIAS(led_blue))};
@@ -81,7 +81,7 @@ static void central_set_led_color(uint8_t color) { ARG_UNUSED(color); }
 static void led_restore_work_handler(struct k_work *work) {
     ARG_UNUSED(work);
     central_set_led_color(0);
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_NODELABEL(tpl_led))
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(tpl_led), okay)
     struct zmk_behavior_binding binding = {
         .behavior_dev = tpl_led_name,
         .param1 = 0,
@@ -90,16 +90,13 @@ static void led_restore_work_handler(struct k_work *work) {
         .position = 0,
         .timestamp = k_uptime_get(),
     };
-    (void)zmk_split_central_invoke_behavior(0, &binding, event, false);
-#endif
-#if IS_ENABLED(CONFIG_RGBLED_WIDGET)
-    indicate_layer();
+    (void)zmk_split_central_invoke_behavior(0, &binding, event, true);
 #endif
 }
 
 static void flash_led_brief(uint8_t color) {
     central_set_led_color(color);
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_NODELABEL(tpl_led))
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(tpl_led), okay)
     struct zmk_behavior_binding binding = {
         .behavior_dev = tpl_led_name,
         .param1 = color,
@@ -108,16 +105,13 @@ static void flash_led_brief(uint8_t color) {
         .position = 0,
         .timestamp = k_uptime_get(),
     };
-    (void)zmk_split_central_invoke_behavior(0, &binding, event, false);
+    (void)zmk_split_central_invoke_behavior(0, &binding, event, true);
 #endif
     k_work_reschedule(&led_restore_work, K_MSEC(450));
 }
 
 static int push_n_to_left_peripheral(void) {
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_NODELABEL(lpps_set_accum))
-    if (!zmk_split_bt_peripheral_is_connected()) {
-        return 0;
-    }
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(lpps_set_accum), okay)
     struct zmk_behavior_binding binding = {
         .behavior_dev = lpps_set_accum_name,
         .param1 = left_tp_accum_n,
@@ -126,10 +120,15 @@ static int push_n_to_left_peripheral(void) {
         .position = 0,
         .timestamp = k_uptime_get(),
     };
-    return zmk_split_central_invoke_behavior(0, &binding, event, false);
+    return zmk_split_central_invoke_behavior(0, &binding, event, true);
 #else
     return 0;
 #endif
+}
+
+static void push_left_n_work_handler(struct k_work *work) {
+    ARG_UNUSED(work);
+    (void)push_n_to_left_peripheral();
 }
 
 static int save_trackpoint_settings(void) {
@@ -183,6 +182,7 @@ int trackpoint_ctl_on_pressed(struct zmk_behavior_binding *binding,
     case TP_CTL_TOGGLE:
         left_tp_enabled = !left_tp_enabled;
         save_trackpoint_settings();
+        flash_led_brief(left_tp_enabled ? 2 : 1);
         return ZMK_BEHAVIOR_OPAQUE;
     case TP_CTL_LEFT_N_UP:
         if (left_tp_accum_n < TP_N_MAX) {
@@ -249,27 +249,40 @@ SETTINGS_STATIC_HANDLER_DEFINE(trackpoint_left, "trackpoint", NULL, trackpoint_l
 
 #endif
 
+static void on_bt_connected(struct bt_conn *conn, uint8_t err) {
+    struct bt_conn_info info;
+    if (err || bt_conn_get_info(conn, &info) != 0) {
+        return;
+    }
+    if (info.role == BT_CONN_ROLE_CENTRAL) {
+        /* Push persisted left_n once GATT characteristic discovery completes. */
+        k_work_reschedule(&push_left_n_work, K_MSEC(1200));
+    }
+}
+
+static void on_bt_security_changed(struct bt_conn *conn, bt_security_t level,
+                                   enum bt_security_err err) {
+    struct bt_conn_info info;
+    if (err || level < BT_SECURITY_L2 || bt_conn_get_info(conn, &info) != 0) {
+        return;
+    }
+    if (info.role == BT_CONN_ROLE_CENTRAL) {
+        k_work_reschedule(&push_left_n_work, K_MSEC(1200));
+    }
+}
+
+BT_CONN_CB_DEFINE(trackpoint_left_bt_cb) = {
+    .connected = on_bt_connected,
+    .security_changed = on_bt_security_changed,
+};
+
 static int trackpoint_left_central_init(void) {
     k_work_init_delayable(&led_restore_work, led_restore_work_handler);
+    k_work_init_delayable(&push_left_n_work, push_left_n_work_handler);
     apply_right_tp_accum_n();
-    push_n_to_left_peripheral();
     return 0;
 }
 
 SYS_INIT(trackpoint_left_central_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
-
-static int on_peripheral_status(const zmk_event_t *eh) {
-    const struct zmk_split_peripheral_status_changed *ev =
-        as_zmk_split_peripheral_status_changed(eh);
-
-    if (ev == NULL || !ev->connected) {
-        return ZMK_EV_EVENT_BUBBLE;
-    }
-    push_n_to_left_peripheral();
-    return ZMK_EV_EVENT_BUBBLE;
-}
-
-ZMK_LISTENER(trackpoint_left_periph, on_peripheral_status);
-ZMK_SUBSCRIPTION(trackpoint_left_periph, zmk_split_peripheral_status_changed);
 
 #endif

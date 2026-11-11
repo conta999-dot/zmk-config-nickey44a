@@ -97,9 +97,9 @@
         #address-cells = <1>;
         #size-cells = <0>;
 
-        left_trackpoint_split: left_trackpoint_split@0 {
+        left_trackpoint_split: left_trackpoint_split@1 {
             compatible = "zmk,input-split";
-            reg = <0>;
+            reg = <1>;
         };
     };
 

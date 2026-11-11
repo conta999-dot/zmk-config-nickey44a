@@ -2,7 +2,7 @@
 
 / {
     behaviors {
-        /omit-if-no-ref/ lpps_set_accum: lpps_set_accum {
+        lpps_set_accum: lpps_set_accum {
             compatible = "zmk,behavior-lpps-set-accum";
             #binding-cells = <1>;
         };

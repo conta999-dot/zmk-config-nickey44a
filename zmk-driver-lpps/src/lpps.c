@@ -23,6 +23,11 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
 
 #define DT_DRV_COMPAT lpps
 
+#define LPPS_MIN_POLL_INTERVAL_MS 8
+#define LPPS_ERROR_BACKOFF_MS     50
+#define LPPS_BOOT_WARMUP_MS       500
+#define LPPS_RESUME_WARMUP_MS     50
+
 /*
  * Optional software jitter filter (CONFIG_LPPS_JITTER_FILTER). When off, x/y are
  * reported unchanged every IRQ (upstream sekigon-gonnoc behavior).
@@ -53,6 +58,7 @@ struct lpps_data {
     struct k_work_delayable irq_reenable_work;
     struct gpio_callback motion_cb;
     atomic_t behavior_calibration_pending;
+    uint8_t discard_samples;
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
     int16_t accum_x;
     int16_t accum_y;
@@ -128,23 +134,23 @@ static void lpps_irq_reenable_work_handler(struct k_work *work) {
     struct lpps_data *data = CONTAINER_OF(dwork, struct lpps_data, irq_reenable_work);
     const struct device *dev = data->dev;
 
+    /*
+     * Rate-limited polling / interrupt re-arm:
+     * LPPS keeps RDY (irq_gpio) LOW while motion data is waiting to be read over I2C.
+     * If RDY is already LOW after the cooldown interval, submit one read work directly
+     * (keeping GPIO IRQ disabled so it cannot flood k_sys_work_q). Only re-enable the
+     * level-low interrupt once RDY returns HIGH (idle).
+     */
     if (lpps_irq_is_active(dev)) {
-        k_work_reschedule(&data->irq_reenable_work, K_MSEC(1));
+        k_work_submit(&data->motion_work);
         return;
     }
 
     lpps_interrupt_enable(dev);
 }
 
-static void lpps_interrupt_enable_when_inactive(struct lpps_data *data) {
-    const struct device *dev = data->dev;
-
-    if (lpps_irq_is_active(dev)) {
-        k_work_reschedule(&data->irq_reenable_work, K_MSEC(1));
-        return;
-    }
-
-    lpps_interrupt_enable(dev);
+static void lpps_schedule_next_poll(struct lpps_data *data, int32_t delay_ms) {
+    k_work_reschedule(&data->irq_reenable_work, K_MSEC(delay_ms));
 }
 
 static bool lpps_is_ready(const struct device *dev) {
@@ -167,7 +173,7 @@ static void lpps_motion_work_handler(struct k_work *work) {
     // Only read data if device is ready
     if (!lpps_is_ready(dev)) {
         LOG_WRN("Device not ready for motion data");
-        lpps_interrupt_enable_when_inactive(data);
+        lpps_schedule_next_poll(data, LPPS_MIN_POLL_INTERVAL_MS);
         return;
     }
 
@@ -192,7 +198,7 @@ static void lpps_motion_work_handler(struct k_work *work) {
             transfer_bytes[2]);
     if (ret < 0) {
         LOG_ERR("I2C read failed: %d", ret);
-        lpps_interrupt_enable_when_inactive(data);
+        lpps_schedule_next_poll(data, LPPS_ERROR_BACKOFF_MS);
         return;
     }
 
@@ -202,6 +208,12 @@ static void lpps_motion_work_handler(struct k_work *work) {
 
     // close i2c bus of module (required every motion IRQ)
     ret = lpps_i2c_read_reg(dev, 0, transfer_bytes, 1);
+
+    if (data->discard_samples > 0) {
+        data->discard_samples--;
+        lpps_schedule_next_poll(data, LPPS_MIN_POLL_INTERVAL_MS);
+        return;
+    }
 
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
     if ((current_time - data->last_motion_ms) > CONFIG_LPPS_ACCUM_IDLE_MS) {
@@ -215,8 +227,9 @@ static void lpps_motion_work_handler(struct k_work *work) {
     data->accum_x += x;
     data->accum_y += y;
 
-    const bool strong_sample = (x >= CONFIG_LPPS_INSTANT_REPORT || x <= -CONFIG_LPPS_INSTANT_REPORT ||
-                                y >= CONFIG_LPPS_INSTANT_REPORT || y <= -CONFIG_LPPS_INSTANT_REPORT);
+    const int instant_thresh = MAX(CONFIG_LPPS_INSTANT_REPORT, lpps_accum_report_runtime);
+    const bool strong_sample = (x >= instant_thresh || x <= -instant_thresh ||
+                                y >= instant_thresh || y <= -instant_thresh);
     const bool accum_ready = (data->accum_x >= lpps_accum_report_runtime ||
                               data->accum_x <= -lpps_accum_report_runtime ||
                               data->accum_y >= lpps_accum_report_runtime ||
@@ -230,19 +243,19 @@ static void lpps_motion_work_handler(struct k_work *work) {
         data->accum_y -= oy;
 
         LOG_DBG("Movement: x=%4d y=%4d z=%4d (report %d %d)", x, y, z, ox, oy);
-        input_report_rel(dev, INPUT_REL_X, ox, false, K_FOREVER);
-        input_report_rel(dev, INPUT_REL_Y, oy, true, K_FOREVER);
+        input_report_rel(dev, INPUT_REL_X, ox, false, K_NO_WAIT);
+        input_report_rel(dev, INPUT_REL_Y, oy, true, K_NO_WAIT);
     }
 #else
     ARG_UNUSED(current_time);
     ARG_UNUSED(z);
 
     LOG_DBG("Movement: x=%4d y=%4d z=%4d", x, y, z);
-    input_report_rel(dev, INPUT_REL_X, x, false, K_FOREVER);
-    input_report_rel(dev, INPUT_REL_Y, y, true, K_FOREVER);
+    input_report_rel(dev, INPUT_REL_X, x, false, K_NO_WAIT);
+    input_report_rel(dev, INPUT_REL_Y, y, true, K_NO_WAIT);
 #endif
 
-    lpps_interrupt_enable_when_inactive(data);
+    lpps_schedule_next_poll(data, LPPS_MIN_POLL_INTERVAL_MS);
 }
 
 /* Public API: request that the driver perform the write on its work handler */
@@ -333,11 +346,13 @@ static int lpps_init(const struct device *dev) {
     }
 
     if (gpio_is_ready_dt(&cfg->irq_gpio)) {
-        ret = lpps_interrupt_configure(dev, GPIO_INT_LEVEL_LOW);
+        ret = lpps_interrupt_configure(dev, GPIO_INT_DISABLE);
         if (ret != 0) {
             LOG_ERR("Motion interrupt configuration failed: %d", ret);
             return ret;
         }
+        data->discard_samples = 2;
+        lpps_schedule_next_poll(data, LPPS_BOOT_WARMUP_MS);
     }
 
     ret = pm_device_runtime_enable(dev);
@@ -403,11 +418,13 @@ static int lpps_pm_action(const struct device *dev, enum pm_device_action action
                 return ret;
             }
 
-            ret = lpps_interrupt_configure(dev, GPIO_INT_LEVEL_LOW);
+            ret = lpps_interrupt_configure(dev, GPIO_INT_DISABLE);
             if (ret < 0) {
-                LOG_ERR("Failed to enable IRQ interrupt: %d", ret);
+                LOG_ERR("Failed to disable IRQ interrupt on resume: %d", ret);
                 return ret;
             }
+            data->discard_samples = 1;
+            lpps_schedule_next_poll(data, LPPS_RESUME_WARMUP_MS);
         }
 
         break;

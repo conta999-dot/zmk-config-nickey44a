@@ -66,7 +66,7 @@ static const struct behavior_driver_api tpl_led_driver_api = {
     .locality = BEHAVIOR_LOCALITY_EVENT_SOURCE,
 };
 
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_NODELABEL(tpl_led))
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(tpl_led), okay)
 BEHAVIOR_DT_DEFINE(DT_NODELABEL(tpl_led), NULL, NULL, NULL, NULL, POST_KERNEL,
                    CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &tpl_led_driver_api);
 #endif

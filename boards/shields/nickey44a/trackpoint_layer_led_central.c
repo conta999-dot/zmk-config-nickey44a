@@ -16,7 +16,7 @@
 
 #define TRACKPOINT_LAYER_IDX 4
 
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_NODELABEL(tpl_led))
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(tpl_led), okay)
 
 static bool peripheral_led_on;
 
@@ -36,7 +36,7 @@ static void sync_peripheral_trackpoint_led(bool on) {
         .timestamp = k_uptime_get(),
     };
 
-    (void)zmk_split_central_invoke_behavior(0, &binding, event, on);
+    (void)zmk_split_central_invoke_behavior(0, &binding, event, true);
 }
 
 static int on_trackpoint_layer_state(const zmk_event_t *eh) {
