@@ -7,14 +7,16 @@
     pointing_listener: pointing_listener {
         compatible = "zmk,input-listener";
         device = <&pointing_device>;
-        input-processors = <&zip_temp_layer 4 400>,
+        input-processors = <&zip_typing_lockout 180>,
+                           <&zip_temp_layer 4 400>,
                            <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
                            <&zip_xy_scaler 1 2>,
                            <&zip_tpc_mode 1>;
 
         mo2_scroll {
             layers = <2>;
-            input-processors = <&zip_x_scaler 0 1>,
+            input-processors = <&zip_typing_lockout 180>,
+                               <&zip_x_scaler 0 1>,
                                <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
                                <&zip_y_scaler 1 8>,
                                <&zip_xy_to_scroll_mapper>;
@@ -54,13 +56,29 @@
     };
 };
 
+&zip_temp_layer {
+    require-prior-idle-ms = <250>;
+    excluded-positions = <38 39 40 41 42 43>;
+};
+
 &left_pointing_listener {
     status = "okay";
     input-processors = <&zip_left_tp_gate>,
+                       <&zip_typing_lockout 180>,
                        <&zip_temp_layer 4 400>,
                        <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
                        <&zip_xy_scaler 1 2>,
                        <&zip_tpc_mode 0>;
+
+    mo2_scroll {
+        layers = <2>;
+        input-processors = <&zip_left_tp_gate>,
+                           <&zip_typing_lockout 180>,
+                           <&zip_x_scaler 0 1>,
+                           <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
+                           <&zip_y_scaler 1 8>,
+                           <&zip_xy_to_scroll_mapper>;
+    };
 };
 
 &pinctrl {

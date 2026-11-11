@@ -1,0 +1,5 @@
+description: Suppress relative pointer events briefly after non-modifier keystrokes (param1 = lockout ms)
+
+compatible: "zmk,input-processor-typing-lockout"
+
+include: ip_one_param.yaml
