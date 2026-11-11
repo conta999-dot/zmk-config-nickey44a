@@ -3,6 +3,10 @@
 
 #include "nickey44a.dtsi"
 
+&uicr {
+    nfct-pins-as-gpios;
+};
+
 / {
     pointing_listener: pointing_listener {
         compatible = "zmk,input-listener";

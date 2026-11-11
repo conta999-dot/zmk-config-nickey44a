@@ -3,6 +3,10 @@
 
 #include "nickey44a.dtsi"
 
+&uicr {
+    nfct-pins-as-gpios;
+};
+
 &kscan0 {
         col-gpios
             = <&xiao_d 1 GPIO_ACTIVE_HIGH>
