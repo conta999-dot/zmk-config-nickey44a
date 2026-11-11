@@ -20,6 +20,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import os
+          import re
           import subprocess
 
           event = os.environ.get("EVENT_NAME", "")
@@ -45,24 +46,28 @@ jobs:
 
           title = (raw_title.splitlines()[0].strip() if raw_title else "") or "firmware"
 
-          # GitHub Actions upload-artifact v4 forbids: " : < > | * ? \r \n \ /
+          # Keep strictly ASCII-safe characters so GitHub Web UI / Azure Blob SAS
+          # downloads and Windows unzip never fail on '#', '%', ':', '/', or non-ASCII.
           replacements = {
-              ":": "：",
-              "/": "／",
-              "\\": "＼",
-              '"': "'",
-              "<": "＜",
-              ">": "＞",
-              "|": "｜",
-              "*": "＊",
-              "?": "？",
+              ":": "-",
+              "/": "-",
+              "\\": "-",
+              "#": "No",
+              "%": "pct",
+              '"': "",
+              "<": "",
+              ">": "",
+              "|": "-",
+              "*": "",
+              "?": "",
           }
           for bad, safe in replacements.items():
               title = title.replace(bad, safe)
-          title = "".join(ch for ch in title if ch >= " " and ch != "\x7f")
+          title = re.sub(r"[^A-Za-z0-9_.() -]+", "_", title)
+          title = re.sub(r"\s+", " ", title).strip() or "firmware"
 
-          archive_name = f"Nikkey44A_Farm_#{run_number}_{title}"
-          archive_name = archive_name[:180].rstrip(" .")
+          archive_name = f"Nikkey44A_Farm_No{run_number}_{title}"
+          archive_name = archive_name[:100].rstrip(" ._")
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
               fh.write(f"archive_name={archive_name}\n")
