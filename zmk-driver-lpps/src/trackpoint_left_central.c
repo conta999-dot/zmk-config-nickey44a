@@ -6,6 +6,7 @@
  */
 
 #include <lpps.h>
+#include <trackpoint_central.h>
 
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
@@ -174,12 +175,8 @@ DT_INST_FOREACH_STATUS_OKAY(LEFT_TP_GATE_INST)
 
 #endif
 
-#define DT_DRV_COMPAT zmk_behavior_tp_left_ctl
-
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
-
-static int on_tp_left_ctl_pressed(struct zmk_behavior_binding *binding,
-                                  struct zmk_behavior_binding_event event) {
+int trackpoint_ctl_on_pressed(struct zmk_behavior_binding *binding,
+                              struct zmk_behavior_binding_event event) {
     ARG_UNUSED(event);
 
     switch (binding->param1) {
@@ -223,27 +220,6 @@ static int on_tp_left_ctl_pressed(struct zmk_behavior_binding *binding,
         return ZMK_BEHAVIOR_OPAQUE;
     }
 }
-
-static int on_tp_left_ctl_released(struct zmk_behavior_binding *binding,
-                                   struct zmk_behavior_binding_event event) {
-    ARG_UNUSED(binding);
-    ARG_UNUSED(event);
-    return ZMK_BEHAVIOR_OPAQUE;
-}
-
-static const struct behavior_driver_api tp_left_ctl_api = {
-    .binding_pressed = on_tp_left_ctl_pressed,
-    .binding_released = on_tp_left_ctl_released,
-    .locality = BEHAVIOR_LOCALITY_GLOBAL,
-};
-
-#define TP_LEFT_CTL_INST(n)                                                                        \
-    BEHAVIOR_DT_INST_DEFINE(n, NULL, NULL, NULL, NULL, POST_KERNEL,                                 \
-                            CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &tp_left_ctl_api);
-
-DT_INST_FOREACH_STATUS_OKAY(TP_LEFT_CTL_INST)
-
-#endif
 
 #if IS_ENABLED(CONFIG_SETTINGS)
 
