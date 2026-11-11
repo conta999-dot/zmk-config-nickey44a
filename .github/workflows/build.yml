@@ -1,5 +1,76 @@
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    name: Prepare Artifact Name
+    outputs:
+      archive_name: ${{ steps.meta.outputs.archive_name }}
+    steps:
+      - name: Generate archive name
+        id: meta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import subprocess
+
+          event = os.environ.get("EVENT_NAME", "")
+          run_number = os.environ.get("RUN_NUMBER", "0")
+          raw_title = ""
+
+          if event == "pull_request":
+              raw_title = os.environ.get("PR_TITLE", "")
+          elif event == "push":
+              raw_title = os.environ.get("HEAD_COMMIT_MSG", "")
+
+          if not raw_title.strip():
+              repo = os.environ.get("REPO", "")
+              sha = os.environ.get("SHA", "")
+              if repo and sha:
+                  res = subprocess.run(
+                      ["gh", "api", f"repos/{repo}/commits/{sha}", "--jq", ".commit.message"],
+                      capture_output=True,
+                      text=True,
+                  )
+                  if res.returncode == 0:
+                      raw_title = res.stdout
+
+          title = (raw_title.splitlines()[0].strip() if raw_title else "") or "firmware"
+
+          # GitHub Actions upload-artifact v4 forbids: " : < > | * ? \r \n \ /
+          replacements = {
+              ":": "：",
+              "/": "／",
+              "\\": "＼",
+              '"': "'",
+              "<": "＜",
+              ">": "＞",
+              "|": "｜",
+              "*": "＊",
+              "?": "？",
+          }
+          for bad, safe in replacements.items():
+              title = title.replace(bad, safe)
+          title = "".join(ch for ch in title if ch >= " " and ch != "\x7f")
+
+          archive_name = f"Nikkey44A_Farm_#{run_number}_{title}"
+          archive_name = archive_name[:180].rstrip(" .")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"archive_name={archive_name}\n")
+          print(f"Resolved archive_name: {archive_name}.zip")
+          PY
+
   build:
+    needs: prepare
     uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3.0
+    with:
+      archive_name: ${{ needs.prepare.outputs.archive_name }}
