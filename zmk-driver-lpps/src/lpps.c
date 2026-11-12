@@ -216,6 +216,17 @@ static void lpps_motion_work_handler(struct k_work *work) {
     }
 
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
+    if (abs(x) <= CONFIG_LPPS_SAMPLE_DEADZONE) {
+        x = 0;
+    }
+    if (abs(y) <= CONFIG_LPPS_SAMPLE_DEADZONE) {
+        y = 0;
+    }
+    if (x == 0 && y == 0) {
+        lpps_schedule_next_poll(data, LPPS_MIN_POLL_INTERVAL_MS);
+        return;
+    }
+
     if ((current_time - data->last_motion_ms) > CONFIG_LPPS_ACCUM_IDLE_MS) {
         data->accum_x = 0;
         data->accum_y = 0;

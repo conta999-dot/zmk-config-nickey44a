@@ -22,4 +22,9 @@
         compatible = "zmk,input-processor-typing-lockout";
         #input-processor-cells = <1>;
     };
+
+    /omit-if-no-ref/ zip_tp_layer: zip_tp_layer {
+        compatible = "zmk,input-processor-tp-layer";
+        #input-processor-cells = <2>;
+    };
 };

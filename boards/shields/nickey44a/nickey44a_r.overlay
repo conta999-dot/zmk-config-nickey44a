@@ -12,7 +12,7 @@
         compatible = "zmk,input-listener";
         device = <&pointing_device>;
         input-processors = <&zip_typing_lockout 180>,
-                           <&zip_temp_layer 4 400>,
+                           <&zip_tp_layer 4 400>,
                            <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
                            <&zip_xy_scaler 1 2>,
                            <&zip_tpc_mode 1>;
@@ -60,7 +60,9 @@
     };
 };
 
-&zip_temp_layer {
+&zip_tp_layer {
+    activation-threshold = <24>;
+    activation-window-ms = <250>;
     require-prior-idle-ms = <250>;
     excluded-positions = <38 39 40 41 42 43>;
 };
@@ -69,7 +71,7 @@
     status = "okay";
     input-processors = <&zip_left_tp_gate>,
                        <&zip_typing_lockout 180>,
-                       <&zip_temp_layer 4 400>,
+                       <&zip_tp_layer 4 400>,
                        <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
                        <&zip_xy_scaler 1 2>,
                        <&zip_tpc_mode 0>;

@@ -16,6 +16,14 @@ config LPPS_JITTER_FILTER
 
 if LPPS_JITTER_FILTER
 
+config LPPS_SAMPLE_DEADZONE
+    int "Per-sample axis deadzone before accumulation"
+    default 1
+    range 0 32
+    help
+      Raw per-IRQ |x| or |y| samples at or below this value are treated as zero
+      so continuous +/-1 micro-jitter never accumulates into cursor motion.
+
 config LPPS_ACCUM_REPORT
     int "Accumulated delta before a relative motion report"
     default 8

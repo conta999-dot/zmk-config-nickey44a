@@ -1,0 +1,30 @@
+description: Temporary TrackPoint layer input processor with movement activation threshold
+
+compatible: "zmk,input-processor-tp-layer"
+
+include: ip_two_param.yaml
+
+properties:
+  activation-threshold:
+    type: int
+    required: false
+    default: 24
+    description: Cumulative |dx| + |dy| motion within activation-window-ms required before enabling the layer
+
+  activation-window-ms:
+    type: int
+    required: false
+    default: 250
+    description: Sliding idle window in ms before resetting pre-activation motion distance
+
+  require-prior-idle-ms:
+    type: int
+    required: false
+    default: 250
+    description: Time in ms after a non-modifier keystroke before the layer may activate
+
+  excluded-positions:
+    type: array
+    required: false
+    default: []
+    description: Key positions (e.g. mouse button thumbs) that keep the temporary layer active when pressed
