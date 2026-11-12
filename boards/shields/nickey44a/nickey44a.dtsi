@@ -3,6 +3,7 @@
 #include <input/processors.dtsi>
 #include <physical_layouts.dtsi>
 #include <behaviors/trackpoint-control.dtsi>
+#include <behaviors/trackpoint-left-ctl.dtsi>
 #include "trackpoint-layer-led.dtsi"
 
 / {
