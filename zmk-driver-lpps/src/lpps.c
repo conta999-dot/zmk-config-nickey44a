@@ -24,6 +24,7 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
 #define DT_DRV_COMPAT lpps
 
 #define LPPS_MIN_POLL_INTERVAL_MS 8
+#define LPPS_LEAKY_DECAY_GAP_MS   24
 #define LPPS_ERROR_BACKOFF_MS     50
 #define LPPS_BOOT_WARMUP_MS       500
 #define LPPS_RESUME_WARMUP_MS     50
@@ -63,6 +64,7 @@ struct lpps_data {
     int16_t accum_x;
     int16_t accum_y;
     int64_t last_motion_ms;
+    uint8_t consecutive_samples;
 #endif
 };
 
@@ -227,16 +229,36 @@ static void lpps_motion_work_handler(struct k_work *work) {
         return;
     }
 
-    if ((current_time - data->last_motion_ms) > CONFIG_LPPS_ACCUM_IDLE_MS) {
+    const int64_t elapsed_ms = current_time - data->last_motion_ms;
+    if (elapsed_ms > CONFIG_LPPS_ACCUM_IDLE_MS) {
         data->accum_x = 0;
         data->accum_y = 0;
+        data->consecutive_samples = 0;
+    } else if (elapsed_ms > LPPS_LEAKY_DECAY_GAP_MS) {
+        /* Decay sparse sub-idle trickle noise without affecting continuous 8-16ms motion. */
+        data->accum_x /= 2;
+        data->accum_y /= 2;
     }
     data->last_motion_ms = current_time;
+    if (data->consecutive_samples < UINT8_MAX) {
+        data->consecutive_samples++;
+    }
 
     data->accum_x = lpps_apply_sign_deadzone(data->accum_x, x);
     data->accum_y = lpps_apply_sign_deadzone(data->accum_y, y);
     data->accum_x += x;
     data->accum_y += y;
+
+    /*
+     * Hold the very first sample after idle in the accumulator:
+     * - Isolated single-IRQ EMI/power spikes never get reported and expire after idle.
+     * - Intentional touch always produces a 2nd sample 8ms later, reporting the full
+     *   combined displacement with zero added heaviness.
+     */
+    if (data->consecutive_samples < 2) {
+        lpps_schedule_next_poll(data, LPPS_MIN_POLL_INTERVAL_MS);
+        return;
+    }
 
     const int instant_thresh = MAX(CONFIG_LPPS_INSTANT_REPORT, lpps_accum_report_runtime);
     const bool strong_sample = (x >= instant_thresh || x <= -instant_thresh ||
@@ -316,6 +338,7 @@ static int lpps_init(const struct device *dev) {
     data->accum_x = 0;
     data->accum_y = 0;
     data->last_motion_ms = 0;
+    data->consecutive_samples = 0;
 #endif
 
 #if DT_INST_NODE_HAS_PROP(0, power_gpios)

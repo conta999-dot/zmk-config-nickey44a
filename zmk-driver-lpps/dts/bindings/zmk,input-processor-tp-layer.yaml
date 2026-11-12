@@ -1,4 +1,4 @@
-description: Temporary TrackPoint layer input processor with movement activation threshold
+description: Temporary TrackPoint layer input processor with net-displacement and multi-frame activation guard
 
 compatible: "zmk,input-processor-tp-layer"
 
@@ -9,13 +9,19 @@ properties:
     type: int
     required: false
     default: 24
-    description: Cumulative |dx| + |dy| motion within activation-window-ms required before enabling the layer
+    description: Net displacement |sum(dx)| + |sum(dy)| within activation-window-ms required before enabling the layer
+
+  min-activation-frames:
+    type: int
+    required: false
+    default: 2
+    description: Minimum consecutive sync frames with X/Y motion required before enabling the layer
 
   activation-window-ms:
     type: int
     required: false
     default: 250
-    description: Sliding idle window in ms before resetting pre-activation motion distance
+    description: Sliding idle window in ms before resetting pre-activation motion tracking
 
   require-prior-idle-ms:
     type: int

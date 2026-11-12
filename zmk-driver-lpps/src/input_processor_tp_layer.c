@@ -1,16 +1,15 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Central input processor: temporary mouse/TrackPoint layer with movement
- * activation threshold.
+ * Central input processor: temporary mouse/TrackPoint layer with net-vector
+ * displacement and multi-frame continuity guard.
  *
- * - Small cursor movements still pass through to move the pointer smoothly,
- *   but the temporary layer (param1) only activates once cumulative |dx|+|dy|
- *   within `activation-window-ms` reaches `activation-threshold`.
- * - Once active, any further X/Y movement extends the `param2` ms timeout so
- *   fine aiming before clicking never drops the layer early.
- * - Non-modifier keystrokes enforce `require-prior-idle-ms` before activation,
- *   and pressing any key outside `excluded-positions` deactivates immediately.
+ * - Pointer movement itself passes through untouched with zero added latency.
+ * - Pre-activation tracking uses signed net displacement (|sum(dx)| + |sum(dy)|)
+ *   so back-and-forth jitter cancels out instead of accumulating, and requires
+ *   at least `min-activation-frames` consecutive sync frames so isolated 1-2
+ *   packet leaks never trigger Layer 4.
+ * - Once active, any X/Y movement extends `param2` ms timeout for smooth aiming.
  */
 
 #define DT_DRV_COMPAT zmk_input_processor_tp_layer
@@ -37,6 +36,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 struct tp_layer_config {
     int32_t activation_threshold;
+    int32_t min_activation_frames;
     int32_t activation_window_ms;
     int32_t require_prior_idle_ms;
     const uint16_t *excluded_positions;
@@ -49,10 +49,20 @@ struct tp_layer_data {
     struct k_work_delayable disable_work;
     uint8_t target_layer;
     bool is_active;
-    int32_t motion_accum;
+    bool frame_has_xy;
+    int32_t net_dx;
+    int32_t net_dy;
+    int32_t frame_count;
     int64_t last_motion_ms;
     int64_t last_non_mod_key_ms;
 };
+
+static inline void reset_pre_activation(struct tp_layer_data *data) {
+    data->net_dx = 0;
+    data->net_dy = 0;
+    data->frame_count = 0;
+    data->frame_has_xy = false;
+}
 
 static bool pos_is_excluded(const struct tp_layer_config *cfg, uint32_t pos) {
     for (size_t i = 0; i < cfg->num_positions; i++) {
@@ -88,7 +98,7 @@ static void disable_work_cb(struct k_work *work) {
 
     if (data->is_active) {
         data->is_active = false;
-        data->motion_accum = 0;
+        reset_pre_activation(data);
         if (zmk_keymap_layer_active(data->target_layer)) {
             zmk_keymap_layer_deactivate(data->target_layer);
         }
@@ -122,29 +132,43 @@ static int tp_layer_handle_event(const struct device *dev, struct input_event *e
     data->target_layer = (uint8_t)layer_idx;
 
     if (data->is_active) {
-        if (timeout_ms > 0) {
+        if (timeout_ms > 0 && event->value != 0) {
             k_work_reschedule(&data->disable_work, K_MSEC(timeout_ms));
         }
         k_mutex_unlock(&data->lock);
         return ZMK_INPUT_PROC_CONTINUE;
     }
 
-    /* Enforce post-typing idle guard before accumulating towards layer activation. */
     if (cfg->require_prior_idle_ms > 0 &&
         (now - data->last_non_mod_key_ms) < cfg->require_prior_idle_ms) {
-        data->motion_accum = 0;
+        reset_pre_activation(data);
         k_mutex_unlock(&data->lock);
         return ZMK_INPUT_PROC_CONTINUE;
     }
 
     if ((now - data->last_motion_ms) > cfg->activation_window_ms) {
-        data->motion_accum = 0;
+        reset_pre_activation(data);
     }
-    data->last_motion_ms = now;
-    data->motion_accum += abs(event->value);
 
-    if (data->motion_accum >= cfg->activation_threshold) {
-        data->motion_accum = 0;
+    if (event->value != 0) {
+        data->last_motion_ms = now;
+        data->frame_has_xy = true;
+        if (event->code == INPUT_REL_X) {
+            data->net_dx += event->value;
+        } else {
+            data->net_dy += event->value;
+        }
+    }
+
+    if (event->sync && data->frame_has_xy) {
+        data->frame_count++;
+        data->frame_has_xy = false;
+    }
+
+    const int32_t net_disp = abs(data->net_dx) + abs(data->net_dy);
+    if (data->frame_count >= cfg->min_activation_frames &&
+        net_disp >= cfg->activation_threshold) {
+        reset_pre_activation(data);
         k_work_submit(&data->activate_work);
         if (timeout_ms > 0) {
             k_work_reschedule(&data->disable_work, K_MSEC(timeout_ms));
@@ -165,7 +189,7 @@ static void dispatch_to_instance(const struct device *dev, const zmk_event_t *eh
             if (data->is_active &&
                 !zmk_keymap_layer_active(zmk_keymap_layer_index_to_id(data->target_layer))) {
                 data->is_active = false;
-                data->motion_accum = 0;
+                reset_pre_activation(data);
                 k_work_cancel_delayable(&data->disable_work);
             }
             k_mutex_unlock(&data->lock);
@@ -182,7 +206,7 @@ static void dispatch_to_instance(const struct device *dev, const zmk_event_t *eh
             if (data->is_active && cfg->num_positions > 0 &&
                 !pos_is_excluded(cfg, pos_ev->position)) {
                 data->is_active = false;
-                data->motion_accum = 0;
+                reset_pre_activation(data);
                 k_work_cancel_delayable(&data->disable_work);
                 zmk_keymap_layer_deactivate(data->target_layer);
             }
@@ -198,7 +222,7 @@ static void dispatch_to_instance(const struct device *dev, const zmk_event_t *eh
         }
         if (k_mutex_lock(&data->lock, K_FOREVER) == 0) {
             data->last_non_mod_key_ms = key_ev->timestamp;
-            data->motion_accum = 0;
+            reset_pre_activation(data);
             k_mutex_unlock(&data->lock);
         }
     }
@@ -235,6 +259,7 @@ static const struct zmk_input_processor_driver_api tp_layer_driver_api = {
     static const uint16_t tp_layer_excluded_##n[] = DT_INST_PROP_OR(n, excluded_positions, {});    \
     static const struct tp_layer_config tp_layer_config_##n = {                                    \
         .activation_threshold = DT_INST_PROP_OR(n, activation_threshold, 24),                      \
+        .min_activation_frames = DT_INST_PROP_OR(n, min_activation_frames, 2),                     \
         .activation_window_ms = DT_INST_PROP_OR(n, activation_window_ms, 250),                     \
         .require_prior_idle_ms = DT_INST_PROP_OR(n, require_prior_idle_ms, 250),                   \
         .excluded_positions = tp_layer_excluded_##n,                                               \
