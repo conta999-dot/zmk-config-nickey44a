@@ -23,8 +23,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #define TPC_POS_LEFT  44
 #define TPC_POS_RIGHT 45
 
-#define TPC_SCROLL_DIV     8
-#define TPC_SCROLL_IDLE_MS 300
+#define TPC_SCROLL_DIV     32
+#define TPC_SCROLL_IDLE_MS 500
 
 static uint8_t tpc_mode_left;
 static uint8_t tpc_mode_right;
@@ -137,7 +137,7 @@ static int tpc_handle_event(const struct device *dev, struct input_event *event,
             return ZMK_INPUT_PROC_STOP;
         }
         event->code = INPUT_REL_HWHEEL;
-        event->value = scaled;
+        event->value = -scaled;
         return ZMK_INPUT_PROC_CONTINUE;
     } else {
         tpc_scroll_rem_x = 0;
@@ -151,7 +151,7 @@ static int tpc_handle_event(const struct device *dev, struct input_event *event,
             return ZMK_INPUT_PROC_STOP;
         }
         event->code = INPUT_REL_WHEEL;
-        event->value = -scaled;
+        event->value = scaled;
         return ZMK_INPUT_PROC_CONTINUE;
     }
 }
