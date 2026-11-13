@@ -5,6 +5,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/init.h>
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <drivers/input_processor.h>
 #include <zephyr/input/input.h>
@@ -65,6 +66,7 @@ SYS_INIT(tpc_config_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 static int tpc_scroll_rem_y;
 static int tpc_scroll_rem_x;
+static int64_t tpc_last_scroll_ms;
 
 static int tpc_handle_event(const struct device *dev, struct input_event *event, uint32_t side,
                             uint32_t unused, struct zmk_input_processor_state *state) {
@@ -77,6 +79,13 @@ static int tpc_handle_event(const struct device *dev, struct input_event *event,
     if (mode != MOUSE_SCRL || event->type != INPUT_EV_REL) {
         return ZMK_INPUT_PROC_CONTINUE;
     }
+
+    const int64_t now = k_uptime_get();
+    if ((now - tpc_last_scroll_ms) > 150) {
+        tpc_scroll_rem_x = 0;
+        tpc_scroll_rem_y = 0;
+    }
+    tpc_last_scroll_ms = now;
 
     switch (event->code) {
     case INPUT_REL_Y: {

@@ -45,7 +45,7 @@ layers:
   - {t: BACKSPACE, h: '5'}
   - RET
   - {t: LANGUAGE 1, h: '3'}
-  - '&tpc MOUSE_MOVE'
+  - '&tpc MOUSE_SCRL'
   - '&tpc MOUSE_MOVE'
   '1':
   - ESCAPE
