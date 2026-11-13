@@ -237,8 +237,8 @@ layers:
   - {t: ▽, type: trans}
   '5':
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
   - '&tp_left_ctl 1'
+  - {t: ▽, type: trans}
   - UP ARROW
   - '&msc SCRL_RIGHT'
   - PAGE UP
@@ -249,8 +249,8 @@ layers:
   - '&tp_left_ctl 3'
   - '&tp_left_ctl'
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
   - '&tp_left_ctl 2'
+  - LEFT ARROW
   - DOWN ARROW
   - RIGHT ARROW
   - PAGE DOWN
