@@ -9,10 +9,15 @@
  *   so back-and-forth jitter cancels out instead of accumulating, and requires
  *   at least `min-activation-frames` consecutive sync frames so isolated 1-2
  *   packet leaks never trigger Layer 4.
- * - Once active, any X/Y movement extends `param2` ms timeout for smooth aiming.
+ * - Reports with absolute value below 3 do not count toward activation and do
+ *   not extend the active timeout, so leftover +/-1 jitter cannot hold Layer 4.
+ * - Once active, an X/Y report of absolute value 3 or more extends `param2` ms.
  */
 
 #define DT_DRV_COMPAT zmk_input_processor_tp_layer
+
+/* Smaller reports are cursor noise and must not arm or hold Layer 4. */
+#define TP_LAYER_MIN_ABS 3
 
 #include <stdlib.h>
 
@@ -132,7 +137,7 @@ static int tp_layer_handle_event(const struct device *dev, struct input_event *e
     data->target_layer = (uint8_t)layer_idx;
 
     if (data->is_active) {
-        if (timeout_ms > 0 && event->value != 0) {
+        if (timeout_ms > 0 && abs(event->value) >= TP_LAYER_MIN_ABS) {
             k_work_reschedule(&data->disable_work, K_MSEC(timeout_ms));
         }
         k_mutex_unlock(&data->lock);
@@ -150,7 +155,7 @@ static int tp_layer_handle_event(const struct device *dev, struct input_event *e
         reset_pre_activation(data);
     }
 
-    if (event->value != 0) {
+    if (abs(event->value) >= TP_LAYER_MIN_ABS) {
         data->last_motion_ms = now;
         data->frame_has_xy = true;
         if (event->code == INPUT_REL_X) {

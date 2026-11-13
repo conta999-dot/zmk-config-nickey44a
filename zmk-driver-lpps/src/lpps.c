@@ -24,6 +24,7 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
 #define DT_DRV_COMPAT lpps
 
 #define LPPS_MIN_POLL_INTERVAL_MS 2
+#define LPPS_MIN_FLUSH_STREAK     4
 #define LPPS_ERROR_BACKOFF_MS     50
 #define LPPS_BOOT_WARMUP_MS       500
 #define LPPS_RESUME_WARMUP_MS     50
@@ -33,14 +34,18 @@ LOG_MODULE_REGISTER(lpps, CONFIG_ZMK_LOG_LEVEL);
  * reported unchanged every IRQ (upstream sekigon-gonnoc behavior).
  */
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
-static inline int16_t lpps_apply_sign_deadzone(int16_t accum, int8_t sample) {
-    if (sample == 0 || accum == 0) {
-        return accum;
+static void lpps_accum_one(int16_t *accum, uint8_t *streak, int8_t sample) {
+    if (sample == 0) {
+        return;
     }
-    if ((accum > 0) != (sample > 0)) {
-        return 0;
+    if (*accum != 0 && ((*accum > 0) != (sample > 0))) {
+        *accum = 0;
+        *streak = 0;
     }
-    return accum;
+    if (*streak < UINT8_MAX) {
+        (*streak)++;
+    }
+    *accum += sample;
 }
 #endif
 
@@ -63,6 +68,8 @@ struct lpps_data {
     int16_t accum_x;
     int16_t accum_y;
     int64_t last_motion_ms;
+    uint8_t streak_x;
+    uint8_t streak_y;
     struct k_work_delayable accum_flush_work;
 #endif
 };
@@ -176,15 +183,24 @@ static void lpps_emit_accum(struct lpps_data *data) {
     }
 }
 
+/* Drop a short same-sign run. A run of LPPS_MIN_FLUSH_STREAK or more is reported. */
+static void lpps_close_idle_window(struct lpps_data *data) {
+    if (data->streak_x < LPPS_MIN_FLUSH_STREAK) {
+        data->accum_x = 0;
+    }
+    if (data->streak_y < LPPS_MIN_FLUSH_STREAK) {
+        data->accum_y = 0;
+    }
+    data->streak_x = 0;
+    data->streak_y = 0;
+    lpps_emit_accum(data);
+}
+
 static void lpps_accum_flush_work_handler(struct k_work *work) {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
     struct lpps_data *data = CONTAINER_OF(dwork, struct lpps_data, accum_flush_work);
 
-    /*
-     * Idle window ended without another IRQ. Pending +/-1 pulses have not
-     * reached ACCUM_REPORT; report them instead of leaving them to be wiped.
-     */
-    lpps_emit_accum(data);
+    lpps_close_idle_window(data);
 }
 
 static void lpps_schedule_accum_flush(struct lpps_data *data) {
@@ -275,25 +291,19 @@ static void lpps_motion_work_handler(struct k_work *work) {
     const int64_t elapsed_ms = current_time - data->last_motion_ms;
     if (elapsed_ms > CONFIG_LPPS_ACCUM_IDLE_MS) {
         /*
-         * The previous sum never reached ACCUM_REPORT. Left uses N=20, so a
-         * stream of +/-1 pulses spaced wider than this window used to be wiped
-         * here and never reached input_report_rel. Flush first, then start a
-         * new window. The incoming sample is still clamped so one large EMI
-         * spike cannot jump the cursor.
+         * Close the previous window. Runs shorter than LPPS_MIN_FLUSH_STREAK
+         * are dropped so isolated +/-1 jitter is not reported. The new sample
+         * is still clamped so one large EMI spike cannot jump the cursor.
          */
         k_work_cancel_delayable(&data->accum_flush_work);
-        lpps_emit_accum(data);
-        data->accum_x = 0;
-        data->accum_y = 0;
+        lpps_close_idle_window(data);
         x = CLAMP(x, -2, 2);
         y = CLAMP(y, -2, 2);
     }
     data->last_motion_ms = current_time;
 
-    data->accum_x = lpps_apply_sign_deadzone(data->accum_x, x);
-    data->accum_y = lpps_apply_sign_deadzone(data->accum_y, y);
-    data->accum_x += x;
-    data->accum_y += y;
+    lpps_accum_one(&data->accum_x, &data->streak_x, x);
+    lpps_accum_one(&data->accum_y, &data->streak_y, y);
 
     const int instant_thresh = MAX(CONFIG_LPPS_INSTANT_REPORT, lpps_accum_report_runtime);
     const bool strong_sample = (x >= instant_thresh || x <= -instant_thresh ||
@@ -306,9 +316,12 @@ static void lpps_motion_work_handler(struct k_work *work) {
     if (strong_sample || accum_ready) {
         LOG_DBG("Movement: x=%4d y=%4d z=%4d", x, y, z);
         lpps_emit_accum(data);
+        data->streak_x = 0;
+        data->streak_y = 0;
+        k_work_cancel_delayable(&data->accum_flush_work);
+    } else {
+        lpps_schedule_accum_flush(data);
     }
-    /* Sub-threshold +/-1 sums are sent when the idle window expires. */
-    lpps_schedule_accum_flush(data);
 #else
     ARG_UNUSED(current_time);
     ARG_UNUSED(z);
@@ -367,6 +380,8 @@ static int lpps_init(const struct device *dev) {
     lpps_accum_report_runtime = CONFIG_LPPS_ACCUM_REPORT;
     data->accum_x = 0;
     data->accum_y = 0;
+    data->streak_x = 0;
+    data->streak_y = 0;
     data->last_motion_ms = 0;
     k_work_init_delayable(&data->accum_flush_work, lpps_accum_flush_work_handler);
 #endif
@@ -441,6 +456,8 @@ static int lpps_pm_action(const struct device *dev, enum pm_device_action action
         k_work_cancel_delayable(&data->accum_flush_work);
         data->accum_x = 0;
         data->accum_y = 0;
+        data->streak_x = 0;
+        data->streak_y = 0;
 #endif
         if (gpio_is_ready_dt(&cfg->irq_gpio)) {
             ret = lpps_interrupt_configure(dev, GPIO_INT_DISABLE);
