@@ -63,6 +63,7 @@ struct lpps_data {
     int16_t accum_x;
     int16_t accum_y;
     int64_t last_motion_ms;
+    struct k_work_delayable accum_flush_work;
 #endif
 };
 
@@ -153,6 +154,48 @@ static void lpps_schedule_next_poll(struct lpps_data *data, int32_t delay_ms) {
     k_work_reschedule(&data->irq_reenable_work, K_MSEC(delay_ms));
 }
 
+#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
+/* Send any pending sub-threshold sum. One HID frame per int8 chunk. */
+static void lpps_emit_accum(struct lpps_data *data) {
+    while (data->accum_x != 0 || data->accum_y != 0) {
+        const int8_t ox = (int8_t)CLAMP(data->accum_x, -127, 127);
+        const int8_t oy = (int8_t)CLAMP(data->accum_y, -127, 127);
+
+        if (ox == 0 && oy == 0) {
+            data->accum_x = 0;
+            data->accum_y = 0;
+            return;
+        }
+
+        data->accum_x -= ox;
+        data->accum_y -= oy;
+
+        LOG_DBG("Flush accum report %d %d", ox, oy);
+        input_report_rel(data->dev, INPUT_REL_X, ox, false, K_NO_WAIT);
+        input_report_rel(data->dev, INPUT_REL_Y, oy, true, K_NO_WAIT);
+    }
+}
+
+static void lpps_accum_flush_work_handler(struct k_work *work) {
+    struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+    struct lpps_data *data = CONTAINER_OF(dwork, struct lpps_data, accum_flush_work);
+
+    /*
+     * Idle window ended without another IRQ. Pending +/-1 pulses have not
+     * reached ACCUM_REPORT; report them instead of leaving them to be wiped.
+     */
+    lpps_emit_accum(data);
+}
+
+static void lpps_schedule_accum_flush(struct lpps_data *data) {
+    if (data->accum_x != 0 || data->accum_y != 0) {
+        k_work_reschedule(&data->accum_flush_work, K_MSEC(CONFIG_LPPS_ACCUM_IDLE_MS));
+    } else {
+        k_work_cancel_delayable(&data->accum_flush_work);
+    }
+}
+#endif
+
 static bool lpps_is_ready(const struct device *dev) {
     const struct lpps_config *cfg = dev->config;
 
@@ -231,13 +274,17 @@ static void lpps_motion_work_handler(struct k_work *work) {
 
     const int64_t elapsed_ms = current_time - data->last_motion_ms;
     if (elapsed_ms > CONFIG_LPPS_ACCUM_IDLE_MS) {
+        /*
+         * The previous sum never reached ACCUM_REPORT. Left uses N=20, so a
+         * stream of +/-1 pulses spaced wider than this window used to be wiped
+         * here and never reached input_report_rel. Flush first, then start a
+         * new window. The incoming sample is still clamped so one large EMI
+         * spike cannot jump the cursor.
+         */
+        k_work_cancel_delayable(&data->accum_flush_work);
+        lpps_emit_accum(data);
         data->accum_x = 0;
         data->accum_y = 0;
-        /*
-         * LPPS reports intentional movement as rapid +/-1..2 pulses, so clamping
-         * only the first sample after idle blocks isolated large EMI spikes
-         * without dropping normal +/-1 pulse streams.
-         */
         x = CLAMP(x, -2, 2);
         y = CLAMP(y, -2, 2);
     }
@@ -257,16 +304,11 @@ static void lpps_motion_work_handler(struct k_work *work) {
                               data->accum_y <= -lpps_accum_report_runtime);
 
     if (strong_sample || accum_ready) {
-        const int8_t ox = (int8_t)CLAMP(data->accum_x, -127, 127);
-        const int8_t oy = (int8_t)CLAMP(data->accum_y, -127, 127);
-
-        data->accum_x -= ox;
-        data->accum_y -= oy;
-
-        LOG_DBG("Movement: x=%4d y=%4d z=%4d (report %d %d)", x, y, z, ox, oy);
-        input_report_rel(dev, INPUT_REL_X, ox, false, K_NO_WAIT);
-        input_report_rel(dev, INPUT_REL_Y, oy, true, K_NO_WAIT);
+        LOG_DBG("Movement: x=%4d y=%4d z=%4d", x, y, z);
+        lpps_emit_accum(data);
     }
+    /* Sub-threshold +/-1 sums are sent when the idle window expires. */
+    lpps_schedule_accum_flush(data);
 #else
     ARG_UNUSED(current_time);
     ARG_UNUSED(z);
@@ -326,6 +368,7 @@ static int lpps_init(const struct device *dev) {
     data->accum_x = 0;
     data->accum_y = 0;
     data->last_motion_ms = 0;
+    k_work_init_delayable(&data->accum_flush_work, lpps_accum_flush_work_handler);
 #endif
 
 #if DT_INST_NODE_HAS_PROP(0, power_gpios)
@@ -394,6 +437,11 @@ static int lpps_pm_action(const struct device *dev, enum pm_device_action action
     switch (action) {
     case PM_DEVICE_ACTION_SUSPEND:
         k_work_cancel_delayable(&data->irq_reenable_work);
+#if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
+        k_work_cancel_delayable(&data->accum_flush_work);
+        data->accum_x = 0;
+        data->accum_y = 0;
+#endif
         if (gpio_is_ready_dt(&cfg->irq_gpio)) {
             ret = lpps_interrupt_configure(dev, GPIO_INT_DISABLE);
             if (ret < 0) {
