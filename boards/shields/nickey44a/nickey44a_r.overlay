@@ -73,7 +73,7 @@
     input-processors = <&zip_left_tp_gate>,
                        <&zip_typing_lockout 150>,
                        <&zip_tp_layer 4 400>,
-                       <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
+                       <&zip_xy_transform INPUT_TRANSFORM_XY_SWAP>,
                        <&zip_xy_scaler 1 2>,
                        <&zip_tpc_mode 0>;
 };
