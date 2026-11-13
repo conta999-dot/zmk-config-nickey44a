@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: MIT
  *
  * Central: drop left split TrackPoint input when disabled; push runtime N to left;
- * Layer-5 shortcuts via &tp_left_ctl (W/S left N±, P/; right N±, @ toggle).
+ * Layer-5 shortcuts via &tp_left_ctl (Q/A left N±, P/; right N±, @ toggle).
  */
 
 #include <lpps.h>
