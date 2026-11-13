@@ -14,12 +14,13 @@
 - **右センサー入力（`pointing_listener`）**
   1. `lpps.c`：I2C 読み出し（最短 `2ms` 間隔）→ 逆方向デッドゾーン → アイドルリセット（`50ms`）→ 累積閾値判定（既定 `N = 8`、ランタイム変更可）
   2. `&zip_typing_lockout 180`：通常キー押下中および打鍵後 `180ms` の入力を破棄
-  3. `&zip_tp_layer 4 400`：正味変位 `24` 以上かつ連続 `2` フレーム以上で Layer 4 を `400ms` 起動
+  3. `&zip_tp_layer 4 400`：正味変位 `12` 以上で Layer 4 を `400ms` 起動
   4. `&zip_xy_transform INPUT_TRANSFORM_X_INVERT` → `&zip_xy_scaler 1 2` → `&zip_tpc_mode 1`（`MOUSE_MOVE`）
 - **左 Split 受信入力（`left_pointing_listener`）**
   1. `&zip_left_tp_gate`：左 TrackPoint 無効（OFF）時にイベントを破棄
   2. `&zip_typing_lockout 180`：通常キー押下中および打鍵後 `180ms` の入力を破棄
-  3. `&zip_xy_transform INPUT_TRANSFORM_X_INVERT` → `&zip_xy_scaler 1 2` → `&zip_tpc_mode 0`（`MOUSE_SCRL`：`1/8` 分周、150ms アイドルで端数リセット）
+  3. `&zip_tp_layer 4 400`：スクロール変換前の移動量で正味変位 `12` 以上なら Layer 4 を `400ms` 起動
+  4. `&zip_xy_transform INPUT_TRANSFORM_X_INVERT` → `&zip_xy_scaler 1 2` → `&zip_tpc_mode 0`（`MOUSE_SCRL`：`1/8` 分周、150ms アイドルで端数リセット）
 
 ---
 
@@ -47,9 +48,9 @@
   - 非モディファイアキーが押されている間、および押下・離鍵から `<lockout_ms>`（現在 `180ms`）の間、`INPUT_EV_REL` を破棄します。
   - Shift / Ctrl / Alt / GUI 単体押しや `&mkp` マウスクリックではロックアウトされません。
 - **`&zip_tp_layer <layer> <timeout_ms>`**（`src/input_processor_tp_layer.c`）
-  - `activation-threshold`（現在 `<24>`）：`activation-window-ms`（`<350>`）内の符号付き正味変位 `|Σdx| + |Σdy|` がこの値に達すると対象レイヤーを有効化します（往復 Jitter は正負で打ち消し合うため反応しません）。
-  - `min-activation-frames`（現在 `<2>`）：最低連続フレーム数。単発漏れでのレイヤー誤起動を防ぎます。
-  - `require-prior-idle-ms`（現在 `<250>`）：最後の非モディファイアキー打鍵からこの時間が経過するまでレイヤーを起動しません。
+  - `activation-threshold`（現在 `<12>`）：`activation-window-ms`（`<350>`）内の符号付き正味変位 `|Σdx| + |Σdy|` がこの値に達すると対象レイヤーを有効化します（往復 Jitter は正負で打ち消し合うため反応しません）。
+  - `min-activation-frames`（現在 `<1>`）：最低連続フレーム数。右（`N=8`）は単発 `8 < 12` のため 2 フレーム目で起動、左（`N=20`）は 1 フレーム目（`20 >= 12`）から即起動します。
+  - `require-prior-idle-ms`（現在 `<200>`）：最後の非モディファイアキー打鍵からこの時間が経過するまでレイヤーを起動しません。
   - `excluded-positions`（現在 `<38 39 40 41 42 43>`）：親指クリック 6 キー以外の位置が押された瞬間にレイヤーを即解除します。
 - **`&zip_left_tp_gate`**（`src/trackpoint_left_central.c`）
   - 左 TrackPoint が OFF のとき、左からの `INPUT_EV_REL` を破棄します（キーマトリクス入力には影響しません）。
