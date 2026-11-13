@@ -34,7 +34,7 @@
 
 #define TP_N_MIN 1
 #define TP_N_MAX 127
-#define TP_LEFT_N_DEFAULT  20
+#define TP_LEFT_N_DEFAULT  10
 #define TP_RIGHT_N_DEFAULT CONFIG_LPPS_ACCUM_REPORT
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
@@ -134,7 +134,7 @@ static void push_left_n_work_handler(struct k_work *work) {
 static int save_trackpoint_settings(void) {
 #if IS_ENABLED(CONFIG_SETTINGS)
     settings_save_one("trackpoint/left_en", &left_tp_enabled, sizeof(left_tp_enabled));
-    settings_save_one("trackpoint/left_n", &left_tp_accum_n, sizeof(left_tp_accum_n));
+    settings_save_one("trackpoint/left_n_v2", &left_tp_accum_n, sizeof(left_tp_accum_n));
     settings_save_one("trackpoint/right_n", &right_tp_accum_n, sizeof(right_tp_accum_n));
 #endif
     return 0;
@@ -229,7 +229,7 @@ static int trackpoint_left_settings_set(const char *name, size_t len, settings_r
         if (len == sizeof(left_tp_enabled)) {
             read_cb(cb_arg, &left_tp_enabled, len);
         }
-    } else if (settings_name_steq(name, "left_n", NULL)) {
+    } else if (settings_name_steq(name, "left_n_v2", NULL)) {
         if (len == sizeof(left_tp_accum_n)) {
             read_cb(cb_arg, &left_tp_accum_n, len);
             left_tp_accum_n = CLAMP(left_tp_accum_n, TP_N_MIN, TP_N_MAX);

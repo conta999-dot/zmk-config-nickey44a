@@ -11,7 +11,7 @@
     pointing_listener: pointing_listener {
         compatible = "zmk,input-listener";
         device = <&pointing_device>;
-        input-processors = <&zip_typing_lockout 180>,
+        input-processors = <&zip_typing_lockout 150>,
                            <&zip_tp_layer 4 400>,
                            <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
                            <&zip_xy_scaler 1 2>,
@@ -19,7 +19,7 @@
 
         mo2_scroll {
             layers = <2>;
-            input-processors = <&zip_typing_lockout 180>,
+            input-processors = <&zip_typing_lockout 150>,
                                <&zip_x_scaler 0 1>,
                                <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
                                <&zip_y_scaler 1 8>,
@@ -61,17 +61,17 @@
 };
 
 &zip_tp_layer {
-    activation-threshold = <12>;
+    activation-threshold = <4>;
     min-activation-frames = <1>;
     activation-window-ms = <350>;
-    require-prior-idle-ms = <200>;
+    require-prior-idle-ms = <150>;
     excluded-positions = <38 39 40 41 42 43>;
 };
 
 &left_pointing_listener {
     status = "okay";
     input-processors = <&zip_left_tp_gate>,
-                       <&zip_typing_lockout 180>,
+                       <&zip_typing_lockout 150>,
                        <&zip_tp_layer 4 400>,
                        <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
                        <&zip_xy_scaler 1 2>,

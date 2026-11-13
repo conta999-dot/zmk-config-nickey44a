@@ -81,7 +81,7 @@ static int tpc_handle_event(const struct device *dev, struct input_event *event,
     }
 
     const int64_t now = k_uptime_get();
-    if ((now - tpc_last_scroll_ms) > 150) {
+    if ((now - tpc_last_scroll_ms) > 300) {
         tpc_scroll_rem_x = 0;
         tpc_scroll_rem_y = 0;
     }
@@ -90,16 +90,16 @@ static int tpc_handle_event(const struct device *dev, struct input_event *event,
     switch (event->code) {
     case INPUT_REL_Y: {
         int val = event->value + tpc_scroll_rem_y;
-        int scaled = val / 8;
-        tpc_scroll_rem_y = val - (scaled * 8);
+        int scaled = val / 4;
+        tpc_scroll_rem_y = val - (scaled * 4);
         event->code = INPUT_REL_WHEEL;
         event->value = -scaled;
         break;
     }
     case INPUT_REL_X: {
         int val = event->value + tpc_scroll_rem_x;
-        int scaled = val / 8;
-        tpc_scroll_rem_x = val - (scaled * 8);
+        int scaled = val / 4;
+        tpc_scroll_rem_x = val - (scaled * 4);
         event->code = INPUT_REL_HWHEEL;
         event->value = scaled;
         break;
