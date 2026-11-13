@@ -2,16 +2,18 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <stdlib.h>
+#include <string.h>
+
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/init.h>
+#include <zephyr/input/input.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <drivers/input_processor.h>
-#include <zephyr/input/input.h>
 
+#include <drivers/input_processor.h>
 #include <dt-bindings/zmk/trackpoint_control.h>
-#include <string.h>
 
 #include <zmk/behavior.h>
 #include <zmk/keymap.h>
@@ -20,6 +22,9 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #define TPC_POS_LEFT  44
 #define TPC_POS_RIGHT 45
+
+#define TPC_SCROLL_DIV     8
+#define TPC_SCROLL_IDLE_MS 300
 
 static uint8_t tpc_mode_left;
 static uint8_t tpc_mode_right;
@@ -64,8 +69,10 @@ SYS_INIT(tpc_config_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
-static int tpc_scroll_rem_y;
+static int tpc_frame_dx;
+static int tpc_frame_dy;
 static int tpc_scroll_rem_x;
+static int tpc_scroll_rem_y;
 static int64_t tpc_last_scroll_ms;
 
 static int tpc_handle_event(const struct device *dev, struct input_event *event, uint32_t side,
@@ -80,35 +87,73 @@ static int tpc_handle_event(const struct device *dev, struct input_event *event,
         return ZMK_INPUT_PROC_CONTINUE;
     }
 
+    if (event->code != INPUT_REL_X && event->code != INPUT_REL_Y) {
+        return ZMK_INPUT_PROC_CONTINUE;
+    }
+
     const int64_t now = k_uptime_get();
-    if ((now - tpc_last_scroll_ms) > 300) {
+    if ((now - tpc_last_scroll_ms) > TPC_SCROLL_IDLE_MS) {
+        tpc_frame_dx = 0;
+        tpc_frame_dy = 0;
         tpc_scroll_rem_x = 0;
         tpc_scroll_rem_y = 0;
     }
     tpc_last_scroll_ms = now;
 
-    switch (event->code) {
-    case INPUT_REL_Y: {
-        int val = event->value + tpc_scroll_rem_y;
-        int scaled = val / 4;
-        tpc_scroll_rem_y = val - (scaled * 4);
-        event->code = INPUT_REL_WHEEL;
-        event->value = -scaled;
-        break;
-    }
-    case INPUT_REL_X: {
-        int val = event->value + tpc_scroll_rem_x;
-        int scaled = val / 4;
-        tpc_scroll_rem_x = val - (scaled * 4);
-        event->code = INPUT_REL_HWHEEL;
-        event->value = scaled;
-        break;
-    }
-    default:
-        break;
+    if (event->code == INPUT_REL_X) {
+        tpc_frame_dx += event->value;
+    } else {
+        tpc_frame_dy += event->value;
     }
 
-    return ZMK_INPUT_PROC_CONTINUE;
+    /* Wait until the sync frame boundary so X and Y can be compared together. */
+    if (!event->sync) {
+        return ZMK_INPUT_PROC_STOP;
+    }
+
+    const int dx = tpc_frame_dx;
+    const int dy = tpc_frame_dy;
+    tpc_frame_dx = 0;
+    tpc_frame_dy = 0;
+
+    if (dx == 0 && dy == 0) {
+        return ZMK_INPUT_PROC_STOP;
+    }
+
+    /*
+     * Dominant-axis lock (bias slightly toward vertical scroll unless horizontal
+     * push is clearly stronger: |dx| > |dy| * 1.5) + instant remainder reset on
+     * direction reversal.
+     */
+    if (abs(dx) * 2 > abs(dy) * 3) {
+        tpc_scroll_rem_y = 0;
+        if ((dx > 0 && tpc_scroll_rem_x < 0) || (dx < 0 && tpc_scroll_rem_x > 0)) {
+            tpc_scroll_rem_x = 0;
+        }
+        const int val = dx + tpc_scroll_rem_x;
+        const int scaled = val / TPC_SCROLL_DIV;
+        tpc_scroll_rem_x = val - (scaled * TPC_SCROLL_DIV);
+        if (scaled == 0) {
+            return ZMK_INPUT_PROC_STOP;
+        }
+        event->code = INPUT_REL_HWHEEL;
+        event->value = scaled;
+        return ZMK_INPUT_PROC_CONTINUE;
+    } else {
+        tpc_scroll_rem_x = 0;
+        if ((dy > 0 && tpc_scroll_rem_y < 0) || (dy < 0 && tpc_scroll_rem_y > 0)) {
+            tpc_scroll_rem_y = 0;
+        }
+        const int val = dy + tpc_scroll_rem_y;
+        const int scaled = val / TPC_SCROLL_DIV;
+        tpc_scroll_rem_y = val - (scaled * TPC_SCROLL_DIV);
+        if (scaled == 0) {
+            return ZMK_INPUT_PROC_STOP;
+        }
+        event->code = INPUT_REL_WHEEL;
+        event->value = -scaled;
+        return ZMK_INPUT_PROC_CONTINUE;
+    }
 }
 
 static struct zmk_input_processor_driver_api tpc_proc_api = {.handle_event = tpc_handle_event};

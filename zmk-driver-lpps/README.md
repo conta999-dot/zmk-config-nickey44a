@@ -20,7 +20,7 @@
   1. `&zip_left_tp_gate`：左 TrackPoint 無効（OFF）時にイベントを破棄
   2. `&zip_typing_lockout 150`：通常キー押下中および打鍵後 `150ms` の入力を破棄
   3. `&zip_tp_layer 4 400`：最初の 1 レポート目（正味変位 `4` 以上）で Layer 4 を `400ms` 起動
-  4. `&zip_xy_transform INPUT_TRANSFORM_X_INVERT` → `&zip_xy_scaler 1 2` → `&zip_tpc_mode 0`（`MOUSE_SCRL`：`1/4` 分周＝計 `1/8`、300ms アイドルで端数リセット）
+  4. `&zip_xy_transform INPUT_TRANSFORM_X_INVERT` → `&zip_xy_scaler 1 2` → `&zip_tpc_mode 0`（`MOUSE_SCRL`：`1/8` 分周＝計 `1/16`、主軸ロック、逆方向入力時および 300ms アイドルで端数リセット）
 
 ---
 
@@ -55,7 +55,7 @@
 - **`&zip_left_tp_gate`**（`src/trackpoint_left_central.c`）
   - 左 TrackPoint が OFF のとき、左からの `INPUT_EV_REL` を破棄します（キーマトリクス入力には影響しません）。
 - **`&zip_tpc_mode <side>`**（`src/trackpoint_control.c`）
-  - `side = 0`（左：`TPC_POS_LEFT = 44`）/ `side = 1`（右：`TPC_POS_RIGHT = 45`）のキーマップ設定（`&tpc MOUSE_MOVE` / `MOUSE_SCRL`）に従い、`MOUSE_SCRL` 時は相対移動を `1/4` スケールで縦横スクロールへ変換します。
+  - `side = 0`（左：`TPC_POS_LEFT = 44`）/ `side = 1`（右：`TPC_POS_RIGHT = 45`）のキーマップ設定（`&tpc MOUSE_MOVE` / `MOUSE_SCRL`）に従い、`MOUSE_SCRL` 時は `sync` フレーム単位で主軸ロック（`|dx| > |dy| * 1.5` のときのみ横、それ以外は縦優先）および逆向き時の端数即時クリアを行い、`1/8` スケールで縦横スクロールへ変換します。
 
 ### Behaviors
 
