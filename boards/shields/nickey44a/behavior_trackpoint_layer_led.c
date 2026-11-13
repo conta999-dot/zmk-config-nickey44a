@@ -41,8 +41,8 @@ static void set_led_color(uint8_t color) {
     }
 }
 #else
-static void set_led_red(bool on) {
-    ARG_UNUSED(on);
+static void set_led_color(uint8_t color) {
+    ARG_UNUSED(color);
 }
 #endif
 

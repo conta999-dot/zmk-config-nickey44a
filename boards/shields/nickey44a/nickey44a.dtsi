@@ -104,26 +104,10 @@
         };
     };
 
-    /*
-     * Left TrackPoint may use left_trackpoint_split (peripheral) + this listener (central).
-     * Left half overlay disables the sensor; central overlay keeps this listener off until
-     * left TP is re-enabled. Right pointing_listener drives Layer 4 via zip_temp_layer.
-     */
     left_pointing_listener: left_pointing_listener {
         compatible = "zmk,input-listener";
         status = "disabled";
         device = <&left_trackpoint_split>;
-        input-processors = <&zip_temp_layer 4 400>,
-                           <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
-                           <&zip_xy_scaler 1 2>;
-
-        mo2_scroll {
-            layers = <2>;
-            input-processors = <&zip_x_scaler 0 1>,
-                               <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
-                               <&zip_y_scaler 1 8>,
-                               <&zip_xy_to_scroll_mapper>;
-        };
     };
 };
 
