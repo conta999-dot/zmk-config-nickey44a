@@ -63,7 +63,7 @@
 &zip_tp_layer {
     activation-threshold = <24>;
     min-activation-frames = <2>;
-    activation-window-ms = <250>;
+    activation-window-ms = <350>;
     require-prior-idle-ms = <250>;
     excluded-positions = <38 39 40 41 42 43>;
 };
