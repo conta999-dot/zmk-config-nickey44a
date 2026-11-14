@@ -1,0 +1,5 @@
+description: Central TrackPoint control (0=toggle, 1/2=left N±, 3/4=right N±)
+
+compatible: "zmk,behavior-tp-left-ctl"
+
+include: one_param.yaml

@@ -1,0 +1,51 @@
+menuconfig LPPS
+    bool "low power pointing stick"
+    select I2C
+    help
+      Enable LPPS
+
+if LPPS
+
+config LPPS_JITTER_FILTER
+    bool "LPPS software jitter filter"
+    default y
+    help
+      When disabled, each motion IRQ reports raw x/y deltas (same as the upstream
+      sekigon-gonnoc driver). Use this for drift/jitter baseline testing.
+      When enabled, burst/streak/accum thresholds gate small noise before reporting.
+
+if LPPS_JITTER_FILTER
+
+config LPPS_SAMPLE_DEADZONE
+    int "Per-sample axis deadzone before accumulation"
+    default 0
+    range 0 32
+    help
+      Raw per-IRQ |x| or |y| samples at or below this value are treated as zero.
+      Keep at 0 for standard LPPS modules, which output +/-1 pulse-frequency deltas.
+
+config LPPS_ACCUM_REPORT
+    int "Accumulated delta before a relative motion report"
+    default 8
+    range 1 127
+    help
+      Sum of per-IRQ x/y deltas (per axis) must reach at least this magnitude
+      before a report is sent, unless INSTANT_REPORT triggers.
+
+config LPPS_INSTANT_REPORT
+    int "Single-sample magnitude for immediate report"
+    default 12
+    range 1 127
+    help
+      One IRQ sample at or above this value on an axis bypasses accumulation.
+
+config LPPS_ACCUM_IDLE_MS
+    int "Reset accumulators after this many idle milliseconds"
+    default 40
+    range 1 1000
+    help
+      If no motion IRQ occurs for this long, accumulated x/y noise is cleared.
+
+endif
+
+endif

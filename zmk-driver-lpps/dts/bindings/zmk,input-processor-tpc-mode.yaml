@@ -1,0 +1,5 @@
+description: Applies LTP/RTP mode (move vs scroll) to TrackPoint REL events
+
+compatible: "zmk,input-processor-tpc-mode"
+
+include: ip_one_param.yaml

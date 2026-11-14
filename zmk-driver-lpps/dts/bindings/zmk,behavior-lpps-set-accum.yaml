@@ -1,0 +1,5 @@
+description: Set LPPS runtime accumulation threshold on this keyboard half
+
+compatible: "zmk,behavior-lpps-set-accum"
+
+include: one_param.yaml

@@ -1,0 +1,5 @@
+description: TrackPoint Control (keymap metadata for LTP/RTP panel slots)
+
+compatible: "zmk,behavior-trackpoint-control"
+
+include: one_param.yaml

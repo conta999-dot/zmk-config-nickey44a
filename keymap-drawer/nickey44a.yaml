@@ -1,7 +1,52 @@
 layout: {zmk_keyboard: nickey44a}
 layers:
-  default: [TAB, Q, W, E, R, T, Y, U, I, O, P, '''', LCTRL, A, S, D, F, G, H, J, K, L, ;, '-', LSHFT, Z, X, C, V, B, LEFT WIN, DELETE, N, M, ',', ., /, '=', '2',
-    '1', SPACE, BSPC, RET, RALT]
+  default:
+  - TAB
+  - Q
+  - W
+  - E
+  - R
+  - T
+  - Y
+  - U
+  - I
+  - O
+  - P
+  - '@'
+  - RSHIFT
+  - A
+  - S
+  - D
+  - F
+  - G
+  - H
+  - J
+  - K
+  - L
+  - ;
+  - '-'
+  - LCTRL
+  - Z
+  - X
+  - C
+  - V
+  - B
+  - LEFT WIN
+  - B
+  - N
+  - M
+  - ','
+  - .
+  - /
+  - '='
+  - {t: LANGUAGE 2, h: '2'}
+  - SPACE
+  - {t: LANGUAGE 1, h: '1'}
+  - {t: BACKSPACE, h: '5'}
+  - RET
+  - {t: LANGUAGE 1, h: '3'}
+  - '&tpc MOUSE_MOVE'
+  - '&tpc MOUSE_MOVE'
   '1':
   - ESCAPE
   - '1'
@@ -14,37 +59,39 @@ layers:
   - '8'
   - '9'
   - '0'
-  - '`'
+  - ''''
   - {t: ▽, type: trans}
   - F1
   - F2
   - F3
   - F4
   - F5
-  - LEFT
-  - DOWN
-  - UP
-  - RIGHT
-  - {t: ▽, type: trans}
-  - '~'
-  - {t: ▽, type: trans}
   - F6
   - F7
   - F8
   - F9
   - F10
-  - '3'
-  - '&studio_unlock'
+  - '~'
+  - {t: ▽, type: trans}
   - '['
+  - ']'
   - (
   - )
-  - ']'
+  - '|'
+  - '3'
+  - '&studio_unlock'
+  - LEFT ARROW
+  - UP ARROW
+  - DOWN ARROW
+  - RIGHT ARROW
   - \
+  - Ctl+`
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {type: held}
-  - {t: ▽, type: trans}
   - DELETE
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   '2':
@@ -92,6 +139,8 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
   '3':
   - BT CLR
   - {t: BT, h: '0'}
@@ -118,6 +167,19 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
+  - '&ps_calib'
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - '&ps_calib'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -126,9 +188,92 @@ layers:
   - {type: held}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
+  TrackPoint:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - '&mkp MB1'
+  - '&mkp MCLK'
+  - '&mkp MB2'
+  - '&mkp MB1'
+  - '&mkp MB3'
+  - '&mkp MB2'
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  '5':
+  - {t: ▽, type: trans}
+  - '&tp_left_ctl 1'
+  - {t: ▽, type: trans}
+  - UP ARROW
+  - '&msc SCRL_RIGHT'
+  - PAGE UP
+  - PAGE UP
+  - '&msc SCRL_LEFT'
+  - UP ARROW
+  - '&msc SCRL_RIGHT'
+  - '&tp_left_ctl 3'
+  - '&tp_left_ctl'
+  - {t: ▽, type: trans}
+  - '&tp_left_ctl 2'
+  - LEFT ARROW
+  - DOWN ARROW
+  - RIGHT ARROW
+  - PAGE DOWN
+  - PAGE DOWN
+  - LEFT ARROW
+  - DOWN ARROW
+  - RIGHT ARROW
+  - '&tp_left_ctl 4'
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - '&ps_calib'
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - '&ps_calib'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}

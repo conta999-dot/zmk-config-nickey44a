@@ -1,0 +1,8 @@
+/ {
+    behaviors {
+        tpl_led: trackpoint_layer_led {
+            compatible = "zmk,behavior-trackpoint-layer-led";
+            #binding-cells = <1>;
+        };
+    };
+};

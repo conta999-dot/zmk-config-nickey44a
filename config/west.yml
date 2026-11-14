@@ -6,6 +6,8 @@ manifest:
       url-base: https://github.com/cormoran
     - name: caksoylar  # <-- RGB LED
       url-base: https://github.com/caksoylar
+    - name: sekigon-gonnoc
+      url-base: https://github.com/sekigon-gonnoc
   projects:
     - name: zmk
       remote: cormoran

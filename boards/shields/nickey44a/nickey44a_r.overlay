@@ -1,11 +1,41 @@
+#include <zephyr/dt-bindings/i2c/i2c.h>
+#include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
+
 #include "nickey44a.dtsi"
+
+&uicr {
+    nfct-pins-as-gpios;
+};
+
+/ {
+    pointing_listener: pointing_listener {
+        compatible = "zmk,input-listener";
+        device = <&pointing_device>;
+        input-processors = <&zip_typing_lockout 180>,
+                           <&zip_tp_layer 4 400>,
+                           <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
+                           <&zip_xy_scaler 1 2>,
+                           <&zip_tpc_mode 1>;
+
+        mo2_scroll {
+            layers = <2>;
+            input-processors = <&zip_typing_lockout 180>,
+                               <&zip_x_scaler 0 1>,
+                               <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
+                               <&zip_y_scaler 1 8>,
+                               <&zip_xy_to_scroll_mapper>;
+        };
+
+        status = "okay";
+    };
+};
 
 &default_transform {
     col-offset = <6>;
 };
 
 &kscan0 {
-        col-gpios
+    col-gpios
             = <&xiao_d 1 GPIO_ACTIVE_HIGH>
             , <&xiao_d 2 GPIO_ACTIVE_HIGH>
             , <&xiao_d 3 GPIO_ACTIVE_HIGH>
@@ -13,4 +43,64 @@
             , <&xiao_d 5 GPIO_ACTIVE_HIGH>
             , <&xiao_d 6 GPIO_ACTIVE_HIGH>
             ;
+};
+
+&xiao_i2c {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_FAST>;
+    pinctrl-0 = <&lpps_i2c_default>;
+    pinctrl-1 = <&lpps_i2c_sleep>;
+    pinctrl-names = "default", "sleep";
+
+    pointing_device: pointing_device@57 {
+        compatible = "lpps";
+        reg = <0x57>;
+        irq-gpios = <&gpio1 10 GPIO_PULL_UP>;
+        status = "okay";
+    };
+};
+
+&zip_tp_layer {
+    activation-threshold = <24>;
+    min-activation-frames = <2>;
+    activation-window-ms = <350>;
+    require-prior-idle-ms = <250>;
+    excluded-positions = <38 39 40 41 42 43>;
+};
+
+&left_pointing_listener {
+    status = "okay";
+    input-processors = <&zip_left_tp_gate>,
+                       <&zip_typing_lockout 180>,
+                       <&zip_tp_layer 4 400>,
+                       <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
+                       <&zip_xy_scaler 1 2>,
+                       <&zip_tpc_mode 0>;
+
+    mo2_scroll {
+        layers = <2>;
+        input-processors = <&zip_left_tp_gate>,
+                           <&zip_typing_lockout 180>,
+                           <&zip_x_scaler 0 1>,
+                           <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
+                           <&zip_y_scaler 1 8>,
+                           <&zip_xy_to_scroll_mapper>;
+    };
+};
+
+&pinctrl {
+    lpps_i2c_default: lpps_i2c_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 9)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 10)>;
+        };
+    };
+
+    lpps_i2c_sleep: lpps_i2c_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 9)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 10)>;
+            low-power-enable;
+        };
+    };
 };

@@ -1,0 +1,15 @@
+#include <dt-bindings/zmk/trackpoint_control.h>
+
+/ {
+    behaviors {
+        /omit-if-no-ref/ tpc: trackpoint_control {
+            compatible = "zmk,behavior-trackpoint-control";
+            #binding-cells = <1>;
+        };
+    };
+
+    /omit-if-no-ref/ zip_tpc_mode: zip_tpc_mode {
+        compatible = "zmk,input-processor-tpc-mode";
+        #input-processor-cells = <1>;
+    };
+};

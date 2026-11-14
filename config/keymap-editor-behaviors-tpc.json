@@ -1,0 +1,18 @@
+[
+  {
+    "code": "&tpc",
+    "name": "TrackPoint Control",
+    "includes": ["#include <dt-bindings/zmk/trackpoint_control.h>"],
+    "params": ["mode"],
+    "commands": [
+      {
+        "code": "MOUSE_MOVE",
+        "description": "Mouse move up, down, left, right"
+      },
+      {
+        "code": "MOUSE_SCRL",
+        "description": "Mouse scroll up, down, left, right"
+      }
+    ]
+  }
+]

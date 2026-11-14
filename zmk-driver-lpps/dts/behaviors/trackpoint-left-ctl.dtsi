@@ -1,0 +1,32 @@
+#pragma once
+
+#include <dt-bindings/zmk/behaviors.h>
+
+/ {
+    behaviors {
+        lpps_set_accum: lpps_set_accum {
+            compatible = "zmk,behavior-lpps-set-accum";
+            #binding-cells = <1>;
+        };
+
+        /omit-if-no-ref/ tp_left_ctl: tp_left_ctl {
+            compatible = "zmk,behavior-tp-left-ctl";
+            #binding-cells = <1>;
+        };
+    };
+
+    /omit-if-no-ref/ zip_left_tp_gate: zip_left_tp_gate {
+        compatible = "zmk,input-processor-left-tp-gate";
+        #input-processor-cells = <0>;
+    };
+
+    /omit-if-no-ref/ zip_typing_lockout: zip_typing_lockout {
+        compatible = "zmk,input-processor-typing-lockout";
+        #input-processor-cells = <1>;
+    };
+
+    /omit-if-no-ref/ zip_tp_layer: zip_tp_layer {
+        compatible = "zmk,input-processor-tp-layer";
+        #input-processor-cells = <2>;
+    };
+};

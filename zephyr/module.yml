@@ -1,3 +1,7 @@
+name: zmk-config-nickey44a
 build:
+  cmake: .
+  kconfig: zmk-driver-lpps/Kconfig
   settings:
     board_root: .
+    dts_root: zmk-driver-lpps
