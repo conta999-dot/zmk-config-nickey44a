@@ -63,6 +63,9 @@ struct lpps_data {
     int16_t accum_x;
     int16_t accum_y;
     int64_t last_motion_ms;
+    /* Nonzero while that axis streams per-pulse reports after |accum| reached N. */
+    int8_t stream_sign_x;
+    int8_t stream_sign_y;
 #endif
 };
 
@@ -154,25 +157,57 @@ static void lpps_schedule_next_poll(struct lpps_data *data, int32_t delay_ms) {
 }
 
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
-/* Send a sum that reached N. One HID frame per int8 chunk. */
-static void lpps_emit_accum(struct lpps_data *data) {
-    while (data->accum_x != 0 || data->accum_y != 0) {
-        const int8_t ox = (int8_t)CLAMP(data->accum_x, -127, 127);
-        const int8_t oy = (int8_t)CLAMP(data->accum_y, -127, 127);
-
-        if (ox == 0 && oy == 0) {
-            data->accum_x = 0;
-            data->accum_y = 0;
-            return;
-        }
-
-        data->accum_x -= ox;
-        data->accum_y -= oy;
-
-        LOG_DBG("Accum report %d %d", ox, oy);
-        input_report_rel(data->dev, INPUT_REL_X, ox, false, K_NO_WAIT);
-        input_report_rel(data->dev, INPUT_REL_Y, oy, true, K_NO_WAIT);
+/*
+ * Below N (per-axis): accumulate only, no HID report. At N: one report, then
+ * stream each further sample in that direction until idle or sign reversal.
+ */
+static int8_t lpps_filter_axis(int16_t *accum, int8_t *stream_sign, int8_t sample, int report_n,
+                               int instant_thresh) {
+    if (sample == 0) {
+        return 0;
     }
+
+    if (sample >= instant_thresh || sample <= -instant_thresh) {
+        *accum = 0;
+        *stream_sign = (sample > 0) ? 1 : -1;
+        return sample;
+    }
+
+    if (*stream_sign == 0) {
+        *accum = lpps_apply_sign_deadzone(*accum, sample);
+        *accum += sample;
+        if (*accum >= report_n || *accum <= -report_n) {
+            const int8_t out = (int8_t)CLAMP(*accum, -127, 127);
+            *accum -= out;
+            *stream_sign = (out > 0) ? 1 : -1;
+            return out;
+        }
+        return 0;
+    }
+
+    const int8_t sig = (sample > 0) ? 1 : -1;
+    if (sig != *stream_sign) {
+        *stream_sign = 0;
+        *accum = 0;
+        *accum = lpps_apply_sign_deadzone(*accum, sample);
+        *accum += sample;
+        if (*accum >= report_n || *accum <= -report_n) {
+            const int8_t out = (int8_t)CLAMP(*accum, -127, 127);
+            *accum -= out;
+            *stream_sign = (out > 0) ? 1 : -1;
+            return out;
+        }
+        return 0;
+    }
+
+    return sample;
+}
+
+static void lpps_reset_axis_filter(struct lpps_data *data) {
+    data->accum_x = 0;
+    data->accum_y = 0;
+    data->stream_sign_x = 0;
+    data->stream_sign_y = 0;
 }
 #endif
 
@@ -254,34 +289,23 @@ static void lpps_motion_work_handler(struct k_work *work) {
 
     const int64_t elapsed_ms = current_time - data->last_motion_ms;
     if (elapsed_ms > CONFIG_LPPS_ACCUM_IDLE_MS) {
-        /*
-         * Anything under N is noise. Drop it. Do not report a partial sum:
-         * that path ignored the N shortcut and kept the cursor trembling.
-         * The new sample is still clamped so one large EMI spike cannot jump.
-         */
-        data->accum_x = 0;
-        data->accum_y = 0;
+        lpps_reset_axis_filter(data);
         x = CLAMP(x, -2, 2);
         y = CLAMP(y, -2, 2);
     }
     data->last_motion_ms = current_time;
 
-    data->accum_x = lpps_apply_sign_deadzone(data->accum_x, x);
-    data->accum_y = lpps_apply_sign_deadzone(data->accum_y, y);
-    data->accum_x += x;
-    data->accum_y += y;
+    const int report_n = lpps_accum_report_runtime;
+    const int instant_thresh = MAX(CONFIG_LPPS_INSTANT_REPORT, report_n);
+    const int8_t out_x =
+        lpps_filter_axis(&data->accum_x, &data->stream_sign_x, x, report_n, instant_thresh);
+    const int8_t out_y =
+        lpps_filter_axis(&data->accum_y, &data->stream_sign_y, y, report_n, instant_thresh);
 
-    const int instant_thresh = MAX(CONFIG_LPPS_INSTANT_REPORT, lpps_accum_report_runtime);
-    const bool strong_sample = (x >= instant_thresh || x <= -instant_thresh ||
-                                y >= instant_thresh || y <= -instant_thresh);
-    const bool accum_ready = (data->accum_x >= lpps_accum_report_runtime ||
-                              data->accum_x <= -lpps_accum_report_runtime ||
-                              data->accum_y >= lpps_accum_report_runtime ||
-                              data->accum_y <= -lpps_accum_report_runtime);
-
-    if (strong_sample || accum_ready) {
-        LOG_DBG("Movement: x=%4d y=%4d z=%4d", x, y, z);
-        lpps_emit_accum(data);
+    if (out_x != 0 || out_y != 0) {
+        LOG_DBG("Movement: x=%4d y=%4d z=%4d (report %d %d)", x, y, z, out_x, out_y);
+        input_report_rel(dev, INPUT_REL_X, out_x, false, K_NO_WAIT);
+        input_report_rel(dev, INPUT_REL_Y, out_y, true, K_NO_WAIT);
     }
 #else
     ARG_UNUSED(current_time);
@@ -341,6 +365,8 @@ static int lpps_init(const struct device *dev) {
     lpps_accum_report_runtime = CONFIG_LPPS_ACCUM_REPORT;
     data->accum_x = 0;
     data->accum_y = 0;
+    data->stream_sign_x = 0;
+    data->stream_sign_y = 0;
     data->last_motion_ms = 0;
 #endif
 
@@ -411,8 +437,7 @@ static int lpps_pm_action(const struct device *dev, enum pm_device_action action
     case PM_DEVICE_ACTION_SUSPEND:
         k_work_cancel_delayable(&data->irq_reenable_work);
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
-        data->accum_x = 0;
-        data->accum_y = 0;
+        lpps_reset_axis_filter(data);
 #endif
         if (gpio_is_ready_dt(&cfg->irq_gpio)) {
             ret = lpps_interrupt_configure(dev, GPIO_INT_DISABLE);
