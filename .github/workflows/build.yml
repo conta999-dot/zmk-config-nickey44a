@@ -1,4 +1,9 @@
+name: Build nickey44a firmware
+
 on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
 
 jobs:
   prepare:
@@ -79,3 +84,13 @@ jobs:
     uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3.0
     with:
       archive_name: ${{ needs.prepare.outputs.archive_name }}
+
+  draw:
+    if: github.event_name == 'push'
+    needs: build
+    uses: caksoylar/keymap-drawer/.github/workflows/draw-zmk.yml@main
+    permissions:
+      contents: write
+    with:
+      keymap_patterns: "config/*.keymap"
+      output_folder: "keymap-drawer"
