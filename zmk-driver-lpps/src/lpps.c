@@ -158,8 +158,8 @@ static void lpps_schedule_next_poll(struct lpps_data *data, int32_t delay_ms) {
 
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
 /*
- * Below N (per-axis): accumulate only, no HID report. At N: one report, then
- * stream each further sample in that direction until idle or sign reversal.
+ * Below N (per-axis): accumulate only, no HID report. At N: emit one pulse,
+ * then stream each further sample in that direction until idle or sign reversal.
  */
 static int8_t lpps_filter_axis(int16_t *accum, int8_t *stream_sign, int8_t sample, int report_n,
                                int instant_thresh) {
@@ -177,8 +177,9 @@ static int8_t lpps_filter_axis(int16_t *accum, int8_t *stream_sign, int8_t sampl
         *accum = lpps_apply_sign_deadzone(*accum, sample);
         *accum += sample;
         if (*accum >= report_n || *accum <= -report_n) {
-            const int8_t out = (int8_t)CLAMP(*accum, -127, 127);
-            *accum -= out;
+            /* Enter stream with a single pulse so crossing N does not jump by N in one frame. */
+            const int8_t out = (*accum > 0) ? 1 : -1;
+            *accum = 0;
             *stream_sign = (out > 0) ? 1 : -1;
             return out;
         }
@@ -192,8 +193,8 @@ static int8_t lpps_filter_axis(int16_t *accum, int8_t *stream_sign, int8_t sampl
         *accum = lpps_apply_sign_deadzone(*accum, sample);
         *accum += sample;
         if (*accum >= report_n || *accum <= -report_n) {
-            const int8_t out = (int8_t)CLAMP(*accum, -127, 127);
-            *accum -= out;
+            const int8_t out = (*accum > 0) ? 1 : -1;
+            *accum = 0;
             *stream_sign = (out > 0) ? 1 : -1;
             return out;
         }
@@ -296,7 +297,7 @@ static void lpps_motion_work_handler(struct k_work *work) {
     data->last_motion_ms = current_time;
 
     const int report_n = lpps_accum_report_runtime;
-    const int instant_thresh = MAX(CONFIG_LPPS_INSTANT_REPORT, report_n);
+    const int instant_thresh = CONFIG_LPPS_INSTANT_REPORT;
     const int8_t out_x =
         lpps_filter_axis(&data->accum_x, &data->stream_sign_x, x, report_n, instant_thresh);
     const int8_t out_y =

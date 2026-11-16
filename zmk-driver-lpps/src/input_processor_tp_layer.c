@@ -9,8 +9,9 @@
  *   so back-and-forth jitter cancels out instead of accumulating, and requires
  *   at least `min-activation-frames` consecutive sync frames so isolated 1-2
  *   packet leaks never trigger Layer 4.
- * - Reports with absolute value below 3 do not count toward activation and do
- *   not extend the active timeout, so leftover +/-1 jitter cannot hold Layer 4.
+ * - Reports with absolute value below 3 do not count toward activation.
+ *   While active, any non-zero motion extends the timeout; sub-3 jitter alone
+ *   cannot arm Layer 4 before activation.
  * - Once active, an X/Y report of absolute value 3 or more extends `param2` ms.
  */
 
@@ -137,7 +138,7 @@ static int tp_layer_handle_event(const struct device *dev, struct input_event *e
     data->target_layer = (uint8_t)layer_idx;
 
     if (data->is_active) {
-        if (timeout_ms > 0 && abs(event->value) >= TP_LAYER_MIN_ABS) {
+        if (timeout_ms > 0 && event->value != 0) {
             k_work_reschedule(&data->disable_work, K_MSEC(timeout_ms));
         }
         k_mutex_unlock(&data->lock);
