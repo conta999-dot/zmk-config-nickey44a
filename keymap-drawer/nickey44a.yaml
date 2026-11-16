@@ -13,7 +13,7 @@ layers:
   - O
   - P
   - '@'
-  - RSHIFT
+  - LCTRL
   - A
   - S
   - D
@@ -25,7 +25,7 @@ layers:
   - L
   - ;
   - '-'
-  - LCTRL
+  - LEFT SHIFT
   - Z
   - X
   - C
@@ -40,10 +40,10 @@ layers:
   - /
   - '='
   - {t: LANGUAGE 2, h: '2'}
-  - SPACE
-  - {t: LANGUAGE 1, h: '1'}
+  - LEFT ALT
+  - {t: SPACE, h: '1'}
+  - {t: ENTER, h: '1'}
   - {t: BACKSPACE, h: '5'}
-  - RET
   - {t: LANGUAGE 1, h: '3'}
   - '&tpc MOUSE_MOVE'
   - '&tpc MOUSE_MOVE'
@@ -238,7 +238,7 @@ layers:
   '5':
   - {t: ▽, type: trans}
   - '&tp_left_ctl 1'
-  - {t: ▽, type: trans}
+  - '&msc SCRL_LEFT'
   - UP ARROW
   - '&msc SCRL_RIGHT'
   - PAGE UP
@@ -277,8 +277,8 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {type: held}
   - {t: ▽, type: trans}
+  - {type: held}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
