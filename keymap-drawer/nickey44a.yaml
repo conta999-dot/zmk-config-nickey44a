@@ -40,10 +40,10 @@ layers:
   - /
   - '='
   - {t: LANGUAGE 2, h: '2'}
-  - SPACE
-  - {t: LEFT ALT, h: '1'}
-  - {t: BACKSPACE, h: '1'}
-  - {t: ENTER, h: '5'}
+  - {t: SPACE, h: '1'}
+  - LEFT ALT
+  - {t: BACKSPACE, h: '5'}
+  - {t: ENTER, h: '1'}
   - {t: LANGUAGE 1, h: '3'}
   - '&tpc MOUSE_MOVE'
   - '&tpc MOUSE_MOVE'
@@ -87,8 +87,8 @@ layers:
   - \
   - Ctl+`
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
   - {type: held}
+  - {t: ▽, type: trans}
   - DELETE
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -142,12 +142,24 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   '3':
-  - BT CLR
   - {t: BT, h: '0'}
   - {t: BT, h: '1'}
   - {t: BT, h: '2'}
   - {t: BT, h: '3'}
   - {t: BT, h: '4'}
+  - {t: ▽, type: trans}
+  - {t: BT, h: '0'}
+  - {t: BT, h: '1'}
+  - {t: BT, h: '2'}
+  - {t: BT, h: '3'}
+  - {t: BT, h: '4'}
+  - {t: ▽, type: trans}
+  - BT CLR
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -155,18 +167,6 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - BT CLR ALL
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
   - '&ps_calib'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -277,8 +277,8 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
   - {type: held}
+  - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
