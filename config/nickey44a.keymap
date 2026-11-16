@@ -44,11 +44,11 @@
 
         default_layer {
             bindings = <
-&kp TAB         &kp Q  &kp W  &kp E  &kp R             &kp T                                          &kp Y        &kp U             &kp I      &kp O    &kp P     &kp AT_SIGN
-&kp LCTRL       &kp A  &kp S  &kp D  &kp F             &kp G                                          &kp H        &kp J             &kp K      &kp L    &kp SEMI  &kp MINUS
-&kp LEFT_SHIFT  &kp Z  &kp X  &kp C  &kp V             &kp B      &kp LEFT_WIN       &kp B            &kp N        &kp M             &kp COMMA  &kp DOT  &kp FSLH  &kp EQUAL
-                                     &lt 2 LANGUAGE_2  &kp SPACE  &lt 1 LEFT_ALT     &lt 1 BACKSPACE  &lt 5 ENTER  &lt 3 LANGUAGE_1
-                                                                  &tpc MOUSE_MOVE    &tpc MOUSE_MOVE
+&kp TAB         &kp Q  &kp W  &kp E  &kp R             &kp T                                            &kp Y        &kp U             &kp I      &kp O    &kp P     &kp AT_SIGN
+&kp LCTRL       &kp A  &kp S  &kp D  &kp F             &kp G                                            &kp H        &kp J             &kp K      &kp L    &kp SEMI  &kp MINUS
+&kp LEFT_SHIFT  &kp Z  &kp X  &kp C  &kp V             &kp B        &kp LEFT_WIN       &kp B            &kp N        &kp M             &kp COMMA  &kp DOT  &kp FSLH  &kp EQUAL
+                                     &lt 2 LANGUAGE_2  &lt 1 SPACE  &kp LEFT_ALT       &lt 5 BACKSPACE  &lt 1 ENTER  &lt 3 LANGUAGE_1
+                                                                    &tpc MOUSE_MOVE    &tpc MOUSE_MOVE
             >;
         };
 
@@ -74,11 +74,11 @@
 
         layer_3 {
             bindings = <
-&bt BT_CLR      &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4                          &trans  &trans  &trans  &trans  &trans  &trans
-&bt BT_CLR_ALL  &trans        &trans        &trans        &trans        &trans                                &trans  &trans  &trans  &trans  &trans  &trans
-&trans          &ps_calib     &trans        &trans        &trans        &trans        &kp NUMBER_3    &trans  &trans  &trans  &trans  &trans  &trans  &ps_calib
-                                                          &trans        &trans        &trans          &trans  &trans  &trans
-                                                                                      &trans          &trans
+&bt BT_SEL 0    &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4  &trans                          &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4  &trans
+&bt BT_CLR      &trans        &trans        &trans        &trans        &trans                          &trans        &trans        &trans        &trans        &trans        &trans
+&bt BT_CLR_ALL  &ps_calib     &trans        &trans        &trans        &trans  &kp NUMBER_3    &trans  &trans        &trans        &trans        &trans        &trans        &ps_calib
+                                                          &trans        &trans  &trans          &trans  &trans        &trans
+                                                                                &trans          &trans
             >;
         };
 
