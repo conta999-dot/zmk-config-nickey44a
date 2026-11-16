@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>nickey44a LPPS — ドリフト対策・ジッタ対策 実装仕様</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --text: #e7ecf3;
+      --muted: #9aa8bc;
+      --accent: #5b9fd4;
+      --accent2: #7ec8a8;
+      --warn: #d4a85b;
+      --border: #334155;
+    }
+  </style>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+    header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1a2332 60%);
+      padding: 2rem 1.5rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 { margin: 0 0 0.5rem; font-size: 1.55rem; font-weight: 600; }
+    header .meta { color: var(--muted); font-size: 0.9rem; }
+    header .meta code { background: var(--surface2); padding: 0.15em 0.45em; border-radius: 4px; }
+    main { max-width: 52rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    h2 {
+      margin: 2.25rem 0 0.75rem;
+      font-size: 1.25rem;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.35rem;
+    }
+    h3 { margin: 1.5rem 0 0.5rem; font-size: 1.05rem; color: var(--accent2); }
+    p { margin: 0.6rem 0; }
+    .lead { font-size: 1.02rem; color: var(--muted); }
+    .grid2 { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+    @media (min-width: 720px) {
+      .grid2 { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+    }
+    .card h3 { margin-top: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin: 0.75rem 0;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--surface2); font-weight: 600; }
+    code, pre {
+      font-family: ui-monospace, "Cascadia Code", "Source Han Mono", monospace;
+      font-size: 0.84rem;
+    }
+    pre {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+    }
+    ul, ol { margin: 0.4rem 0 0.4rem 1.2rem; padding: 0; }
+    li { margin: 0.35rem 0; }
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      padding: 0.12em 0.5em;
+      border-radius: 4px;
+      margin-right: 0.35rem;
+      background: var(--surface2);
+      color: var(--muted);
+    }
+    .tag.drift { color: #d4a85b; border: 1px solid #5c4a2a; }
+    .tag.jitter { color: #7ec8a8; border: 1px solid #2a5c4a; }
+    .tag.both { color: #a8b4ec; border: 1px solid #3a4570; }
+    .flow {
+      background: var(--surface);
+      border-left: 3px solid var(--accent);
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      border-radius: 0 8px 8px 0;
+    }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>nickey44a LPPS — ドリフト対策・ジッタ対策</h1>
+    <p class="meta">
+      対象リポジトリ: <code>conta999-dot/zmk-config-nickey44a</code> ブランチ <code>lpps</code><br>
+      参照コミット: <code>7aaded75a48a9042171f4969ed1b1988106ea803</code>（ストリーム方式）
+    </p>
+  </header>
+
+  <main>
+    <section id="overview">
+      <h2>概要</h2>
+      <p class="lead">
+        SK8707 を搭載した LPPS ドライバは、1 回の IRQ ごとに主に ±1 のパルス列で移動量を表します。
+        本キーボードでは<strong>左半分（peripheral）と右半分（central）</strong>のそれぞれに LPPS があり、
+        左の生入力は BLE split で中央に届き、中央の input processor チェーンを通って HID に送られます。
+      </p>
+      <div class="grid2">
+        <div class="card">
+          <h3>ジッタ対策の目的</h3>
+          <p>触っていないときのランダムな ±1 や、符号がばらつく微小振動をカーソル・レイヤー4に届かせないこと。</p>
+        </div>
+        <div class="card">
+          <h3>ドリフト対策の目的</h3>
+          <p>一方向に流れ続けるセンサバイアスや、打鍵振動に乗った誤報告、レイヤー4の誤保持を抑えること。連続の±1 ストリーム（意図した操作）は通す。</p>
+        </div>
+      </div>
+      <p>
+        <span class="tag jitter">ジッタ</span> と <span class="tag drift">ドリフト</span> は層が異なります。
+        大半の閾値処理は各半分のファーム内 <code>zmk-driver-lpps/src/lpps.c</code> で、
+        レイヤー4や打鍵ロックアウトは中央（右）ファームの input processor で行います。
+      </p>
+    </section>
+
+    <section id="pipeline">
+      <h2>信号経路</h2>
+      <pre>
+[ LPPS I2C @0x57 ] ──IRQ──► lpps.c（各半分）
+                              │ N 未満は非報告、N 到達後ストリーム
+                              ▼
+        左: zmk,input-split ──BLE──► 中央 left_pointing_listener
+        右: pointing_listener（同一 SoC）
+                              │ zip_left_tp_gate / zip_typing_lockout 180ms
+                              │ zip_tp_layer（レイヤー4）/ xy_scaler 1×2 / tpc_mode
+                              ▼
+                         HID マウスレポート
+      </pre>
+    </section>
+
+    <section id="jitter">
+      <h2>ジッタ対策 — 概要</h2>
+      <ul>
+        <li><strong>N しきい値</strong>: 軸ごとに累積の絶対値が N に達するまで HID を出さない（デフォルト左 20、右 8。レイヤー5で変更可）。</li>
+        <li><strong>ストリームモード</strong>: N に達したあと、同符号の ±1 を 1 サンプルずつ即時送出。階段状の「N 個ずつ跳ね」を解消。</li>
+        <li><strong>符号反転・アイドルでリセット</strong>: バラバラな ±1 は累積が伸びず、N 未満のまま捨てられる。</li>
+        <li><strong>サンプルデッドゾーン 0</strong>: ±1 を捨てない（LPPS の正常パルスを維持）。</li>
+        <li><strong>レイヤー4</strong>: 報告の絶対値が 3 未満は起動・タイムアウト延長に使わない。</li>
+        <li><strong>打鍵ロックアウト</strong>: 非修飾キー後 180 ms は相対移動を止める（入力振動ジッタ）。</li>
+      </ul>
+
+      <h3>ジッタ対策 — 詳細（lpps.c）</h3>
+      <p><code>CONFIG_LPPS_JITTER_FILTER=y</code> 時のみ有効。OFF 時は IRQ ごとに生 x/y をそのまま報告（ベンチマーク用）。</p>
+
+      <table>
+        <thead>
+          <tr><th>定数 / Kconfig</th><th>左（既定）</th><th>右（既定）</th><th>役割</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>LPPS_ACCUM_REPORT</code>（N）</td>
+            <td>20</td>
+            <td>8</td>
+            <td>起動前の累積しきい値。レイヤー5の Q/A・P/; で runtime 変更（1–127、settings 保存）。</td>
+          </tr>
+          <tr>
+            <td><code>LPPS_INSTANT_REPORT</code></td>
+            <td>12</td>
+            <td>12</td>
+            <td>1 サンプルで即時送出する幅。<code>instant = max(INSTANT, N)</code> のため N≥12 時は実質 N と同じ。</td>
+          </tr>
+          <tr>
+            <td><code>LPPS_ACCUM_IDLE_MS</code></td>
+            <td>150</td>
+            <td>50</td>
+            <td>この間 IRQ がなければフィルタ状態をリセット。未送信累積は破棄。</td>
+          </tr>
+          <tr>
+            <td><code>LPPS_SAMPLE_DEADZONE</code></td>
+            <td>0</td>
+            <td>0</td>
+            <td>未使用（0 のときコンパイル時にデッドゾーン分支は無効）。</td>
+          </tr>
+          <tr>
+            <td><code>LPPS_MIN_POLL_INTERVAL_MS</code></td>
+            <td colspan="2">2</td>
+            <td>RDY 立ち下がり後の次ポーリング間隔。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>軸フィルタ状態機械（<code>lpps_filter_axis</code>）</h3>
+      <p>軸 X・Y は独立（<code>stream_sign_x</code> / <code>stream_sign_y</code>、累積も独立）。</p>
+      <ol>
+        <li><strong>待機</strong>（<code>stream_sign == 0</code>）: サンプルを符号デッドゾーン付きで累積。いつも <strong>報告しない</strong>。</li>
+        <li><strong>|累積| ≥ N</strong>: 累積分を 1 フレームで HID 送出、ストリーム符号を設定、以降は<strong>ストリーム</strong>へ。</li>
+        <li><strong>ストリーム中</strong>: 同符号のサンプルはその値をそのまま 1 フレーム送出（±1 が連続すれば滑らかに動く）。</li>
+        <li><strong>符号反転</strong>: ストリーム解除、累積リセット。反転後サンプルから再び N まで蓄積（ジッタの行ったり来たりは届かない）。</li>
+        <li><strong>強サンプル</strong>（|sample| ≥ instant）: 即時そのサンプルを送出しストリーム開始。</li>
+      </ol>
+      <div class="flow">
+        <strong>アイドル境界</strong>: 前回モーションから <code>ACCUM_IDLE_MS</code> 超過で <code>lpps_reset_axis_filter</code>。
+        新しい窓の<strong>最初のサンプル</strong>は <code>CLAMP(±2)</code> のみ（大きな EMI スパイク抑制）。N 未満の部分送信は行わない。
+      </div>
+
+      <h3>ジッタ対策 — 中央（input processor）</h3>
+      <table>
+        <thead>
+          <tr><th>Processor</th><th>設定</th><th>動作</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>zip_typing_lockout</code></td>
+            <td>180 ms</td>
+            <td>非修飾キー押下中および直後 180 ms、<code>INPUT_EV_REL</code> を <code>STOP</code>。修飾子は対象外。</td>
+          </tr>
+          <tr>
+            <td><code>zip_tp_layer</code></td>
+            <td>layer 4, timeout 400 ms</td>
+            <td>起動前: <code>|net_dx|+|net_dy| ≥ 24</code> かつ同期フレーム ≥ 2、かつ報告要素は <code>|value| ≥ 3</code> のみカウント。起動後も <code>|value| &lt; 3</code> では 400 ms 延長しない。</td>
+          </tr>
+          <tr>
+            <td><code>zip_left_tp_gate</code></td>
+            <td>—</td>
+            <td>左 TP オフ時は左 split 由来の REL を破棄（レイヤー5 の <code>@</code> トグル）。</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>overlay（<code>nickey44a_r.overlay</code>）の <code>zip_tp_layer</code> プロパティ:</p>
+      <ul>
+        <li><code>activation-threshold = 24</code></li>
+        <li><code>min-activation-frames = 2</code></li>
+        <li><code>activation-window-ms = 350</code></li>
+        <li><code>require-prior-idle-ms = 250</code>（直近の非修飾キー後 250 ms はレイヤー起動カウントをリセット）</li>
+        <li><code>excluded-positions</code>: 親指列など、押下してもレイヤー4を落とさないキー位置</li>
+      </ul>
+    </section>
+
+    <section id="drift">
+      <h2>ドリフト対策 — 概要</h2>
+      <ul>
+        <li><strong>手動キャリブレーション</strong>: キーマップの <code>&amp;ps_calib</code>（レイヤー3・5）で LPPS レジスタ 0x04 へ書き込み要求。</li>
+        <li><strong>符号デッドゾーン（累積）</strong>: 累積と新サンプルの符号が逆なら累積を 0 に（往復の微小ドリフトを相殺）。</li>
+        <li><strong>アイドルリセット</strong>: 長い無入力後は未送信累積を破棄（ゆっくり溜まったノイズを一方向に流さない）。</li>
+        <li><strong>アイドル直後クランプ</strong>: 窓をまたいだ最初のサンプルを ±2 に制限（単発スパイク型の見かけドリフトを抑制）。</li>
+        <li><strong>起動時サンプル破棄</strong>: 初期化・再開後、先頭 1〜2 IRQ は読み捨て（<code>discard_samples</code>）。</li>
+        <li><strong>IRQ レート制限</strong>: IRQ 無効化＋最小ポーリング間隔で I2C/BLE 飢餓を回避（左キースキャン欠落の再発防止）。</li>
+        <li><strong>レイヤー4 純変位</strong>: 行ったり来たりのカウントが相殺されるため、微小振動だけではレイヤーが付きっぱなしにならない。</li>
+      </ul>
+
+      <h3>ドリフト対策 — 詳細</h3>
+      <table>
+        <thead>
+          <tr><th>機能</th><th>実装箇所</th><th>仕様</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>キャリブレーション</td>
+            <td><code>behavior_lpps_calibration.c</code>, <code>lpps_request_write</code></td>
+            <td>behavior 押下で <code>motion_work</code> 内 I2C write reg 0x04 data 1。モジュール側自動キャリブレーションの手動トリガ。</td>
+          </tr>
+          <tr>
+            <td>符号デッドゾーン</td>
+            <td><code>lpps_apply_sign_deadzone</code></td>
+            <td>累積≠0 かつ sample 符号が反対なら累積=0。連続同符号のみ N に向かって加算。</td>
+          </tr>
+          <tr>
+            <td>ブート / レジューム</td>
+            <td><code>lpps_init</code>, <code>lpps_pm_action</code></td>
+            <td>起動後 <code>discard_samples=2</code>、500 ms ウォームアップ後ポーリング。レジューム後 1 サンプル破棄、50 ms 待ち。</td>
+          </tr>
+          <tr>
+            <td>左 N 同期</td>
+            <td><code>trackpoint_left_central.c</code></td>
+            <td>中央が BLE 接続後 <code>lpps_set_accum</code> behavior で左 peripheral の N を再送。settings に left_n / right_n 保存。</td>
+          </tr>
+          <tr>
+            <td>入力変換</td>
+            <td>overlay</td>
+            <td>右: <code>INPUT_TRANSFORM_X_INVERT</code>、<code>zip_xy_scaler 1 2</code>。左 split も同様（中央側）。</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        <span class="tag both">注意</span>
+        本実装は<strong>一方向に永続する大きなドリフト</strong>（常に同符号で N を超え続ける）には、
+        ストリームモードでカーソルが動き得ます。根本はハードウェアキャリブレーションと N の調整です。
+        ジッタ対策（N 未満非報告）は、ランダムな ±1 には効き、一方向バイアスはキャリブレーション層で扱う設計です。
+      </p>
+    </section>
+
+    <section id="tuning">
+      <h2>運用・調整</h2>
+      <table>
+        <thead>
+          <tr><th>操作</th><th>場所</th><th>効果</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>レイヤー5 + Q / A</td>
+            <td>左 N ±1</td>
+            <td>起動の重さ・ジッタ耐性（大きいほど重い）</td>
+          </tr>
+          <tr>
+            <td>レイヤー5 + P / ;</td>
+            <td>右 N ±1</td>
+            <td>同上（右）</td>
+          </tr>
+          <tr>
+            <td>レイヤー5 + @</td>
+            <td>左 TP on/off</td>
+            <td>左のみ切る場合の確認用</td>
+          </tr>
+          <tr>
+            <td>レイヤー3 / 5 <code>ps_calib</code></td>
+            <td>左右 Z キー付近</td>
+            <td>ドリフトが続くときの再キャリブレーション</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="files">
+      <h2>主要ソースファイル</h2>
+      <ul>
+        <li><code>zmk-driver-lpps/src/lpps.c</code> — 累積・ストリーム・IRQ ポーリング</li>
+        <li><code>zmk-driver-lpps/src/input_processor_tp_layer.c</code> — レイヤー4 純変位・MIN_ABS 3</li>
+        <li><code>zmk-driver-lpps/src/input_processor_typing_lockout.c</code> — 打鍵後ロックアウト</li>
+        <li><code>zmk-driver-lpps/src/trackpoint_left_central.c</code> — 左ゲート・N 同期・settings</li>
+        <li><code>config/nickey44a_l.conf</code> / <code>nickey44a_r.conf</code> — N・アイドル等 Kconfig</li>
+        <li><code>boards/shields/nickey44a/nickey44a_r.overlay</code> — processor チェーン・レイヤー4 DT</li>
+      </ul>
+    </section>
+
+    <footer>
+      生成日時の目安: ビルド済み <code>lpps</code> ブランチ仕様（ストリーム方式）。
+      ブラウザでこの HTML を開いて閲覧できます。
+    </footer>
+  </main>
+</body>
+</html>
