@@ -40,10 +40,10 @@ layers:
   - /
   - '='
   - {t: LANGUAGE 2, h: '2'}
-  - LEFT ALT
-  - {t: SPACE, h: '1'}
-  - {t: ENTER, h: '1'}
-  - {t: BACKSPACE, h: '5'}
+  - SPACE
+  - {t: LEFT ALT, h: '1'}
+  - {t: BACKSPACE, h: '1'}
+  - {t: ENTER, h: '5'}
   - {t: LANGUAGE 1, h: '3'}
   - '&tpc MOUSE_MOVE'
   - '&tpc MOUSE_MOVE'
@@ -78,7 +78,7 @@ layers:
   - (
   - )
   - '|'
-  - '3'
+  - '1'
   - '&studio_unlock'
   - LEFT ARROW
   - UP ARROW
@@ -125,7 +125,7 @@ layers:
   - ^
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - '2'
   - {t: ▽, type: trans}
   - '&'
   - {t: ▽, type: trans}
@@ -172,7 +172,7 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - '3'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -219,7 +219,7 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - '4'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
@@ -266,7 +266,7 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - '5'
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
