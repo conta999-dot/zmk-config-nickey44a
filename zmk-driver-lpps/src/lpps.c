@@ -66,6 +66,10 @@ struct lpps_data {
     /* Nonzero while that axis streams per-pulse reports after |accum| reached N. */
     int8_t stream_sign_x;
     int8_t stream_sign_y;
+    int8_t streak_sign_x;
+    int8_t streak_sign_y;
+    uint8_t streak_cnt_x;
+    uint8_t streak_cnt_y;
 #endif
 };
 
@@ -157,11 +161,61 @@ static void lpps_schedule_next_poll(struct lpps_data *data, int32_t delay_ms) {
 }
 
 #if IS_ENABLED(CONFIG_LPPS_JITTER_FILTER)
+static void lpps_streak_update(int8_t *streak_sign, uint8_t *streak_cnt, int8_t sample) {
+    const int8_t sig = (sample > 0) ? 1 : -1;
+
+    if (*streak_sign == 0 || sig == *streak_sign) {
+        *streak_sign = sig;
+        if (*streak_cnt < UINT8_MAX) {
+            (*streak_cnt)++;
+        }
+    } else {
+        *streak_sign = sig;
+        *streak_cnt = 1;
+    }
+}
+
+static void lpps_streak_reset(int8_t *streak_sign, uint8_t *streak_cnt) {
+    *streak_sign = 0;
+    *streak_cnt = 0;
+}
+
+static bool lpps_should_start_stream(int16_t accum, int report_n, uint8_t streak_cnt,
+                                     int micro_streak) {
+    if (accum >= report_n || accum <= -report_n) {
+        return true;
+    }
+    if (micro_streak <= 0 || streak_cnt < (uint8_t)micro_streak) {
+        return false;
+    }
+
+    const int16_t abs_acc = accum >= 0 ? accum : (int16_t)(-accum);
+    return abs_acc >= micro_streak;
+}
+
+static int8_t lpps_enter_stream(int16_t *accum, int8_t *stream_sign, int8_t *streak_sign,
+                                uint8_t *streak_cnt) {
+    int8_t out;
+
+    if (*accum != 0) {
+        out = (*accum > 0) ? 1 : -1;
+    } else {
+        out = *streak_sign;
+    }
+
+    *accum = 0;
+    lpps_streak_reset(streak_sign, streak_cnt);
+    *stream_sign = (out > 0) ? 1 : -1;
+    return out;
+}
+
 /*
- * Below N (per-axis): accumulate only, no HID report. At N: emit one pulse,
- * then stream each further sample in that direction until idle or sign reversal.
+ * Below N: accumulate only unless MICRO_STREAK consecutive same-sign pulses
+ * warrant early 1:1 streaming. Full N or micro-streak: emit one pulse, then
+ * stream until idle or sign reversal.
  */
-static int8_t lpps_filter_axis(int16_t *accum, int8_t *stream_sign, int8_t sample, int report_n,
+static int8_t lpps_filter_axis(int16_t *accum, int8_t *stream_sign, int8_t *streak_sign,
+                               uint8_t *streak_cnt, int8_t sample, int report_n, int micro_streak,
                                int instant_thresh) {
     if (sample == 0) {
         return 0;
@@ -169,19 +223,17 @@ static int8_t lpps_filter_axis(int16_t *accum, int8_t *stream_sign, int8_t sampl
 
     if (sample >= instant_thresh || sample <= -instant_thresh) {
         *accum = 0;
+        lpps_streak_reset(streak_sign, streak_cnt);
         *stream_sign = (sample > 0) ? 1 : -1;
         return sample;
     }
 
     if (*stream_sign == 0) {
+        lpps_streak_update(streak_sign, streak_cnt, sample);
         *accum = lpps_apply_sign_deadzone(*accum, sample);
         *accum += sample;
-        if (*accum >= report_n || *accum <= -report_n) {
-            /* Enter stream with a single pulse so crossing N does not jump by N in one frame. */
-            const int8_t out = (*accum > 0) ? 1 : -1;
-            *accum = 0;
-            *stream_sign = (out > 0) ? 1 : -1;
-            return out;
+        if (lpps_should_start_stream(*accum, report_n, *streak_cnt, micro_streak)) {
+            return lpps_enter_stream(accum, stream_sign, streak_sign, streak_cnt);
         }
         return 0;
     }
@@ -190,13 +242,11 @@ static int8_t lpps_filter_axis(int16_t *accum, int8_t *stream_sign, int8_t sampl
     if (sig != *stream_sign) {
         *stream_sign = 0;
         *accum = 0;
+        lpps_streak_update(streak_sign, streak_cnt, sample);
         *accum = lpps_apply_sign_deadzone(*accum, sample);
         *accum += sample;
-        if (*accum >= report_n || *accum <= -report_n) {
-            const int8_t out = (*accum > 0) ? 1 : -1;
-            *accum = 0;
-            *stream_sign = (out > 0) ? 1 : -1;
-            return out;
+        if (lpps_should_start_stream(*accum, report_n, *streak_cnt, micro_streak)) {
+            return lpps_enter_stream(accum, stream_sign, streak_sign, streak_cnt);
         }
         return 0;
     }
@@ -209,6 +259,10 @@ static void lpps_reset_axis_filter(struct lpps_data *data) {
     data->accum_y = 0;
     data->stream_sign_x = 0;
     data->stream_sign_y = 0;
+    data->streak_sign_x = 0;
+    data->streak_sign_y = 0;
+    data->streak_cnt_x = 0;
+    data->streak_cnt_y = 0;
 }
 #endif
 
@@ -297,11 +351,14 @@ static void lpps_motion_work_handler(struct k_work *work) {
     data->last_motion_ms = current_time;
 
     const int report_n = lpps_accum_report_runtime;
+    const int micro_streak = CONFIG_LPPS_MICRO_STREAK;
     const int instant_thresh = CONFIG_LPPS_INSTANT_REPORT;
-    const int8_t out_x =
-        lpps_filter_axis(&data->accum_x, &data->stream_sign_x, x, report_n, instant_thresh);
-    const int8_t out_y =
-        lpps_filter_axis(&data->accum_y, &data->stream_sign_y, y, report_n, instant_thresh);
+    const int8_t out_x = lpps_filter_axis(&data->accum_x, &data->stream_sign_x, &data->streak_sign_x,
+                                          &data->streak_cnt_x, x, report_n, micro_streak,
+                                          instant_thresh);
+    const int8_t out_y = lpps_filter_axis(&data->accum_y, &data->stream_sign_y, &data->streak_sign_y,
+                                          &data->streak_cnt_y, y, report_n, micro_streak,
+                                          instant_thresh);
 
     if (out_x != 0 || out_y != 0) {
         LOG_DBG("Movement: x=%4d y=%4d z=%4d (report %d %d)", x, y, z, out_x, out_y);

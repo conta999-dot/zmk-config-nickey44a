@@ -46,6 +46,15 @@ config LPPS_ACCUM_IDLE_MS
     help
       If no motion IRQ occurs for this long, accumulated x/y noise is cleared.
 
+config LPPS_MICRO_STREAK
+    int "Same-sign pulse count for early micro streaming"
+    default 5
+    range 0 40
+    help
+      Before |accum| reaches ACCUM_REPORT, this many consecutive motion pulses
+      in the same direction (with |accum| at least this high) begin 1:1 streaming.
+      Alternating +/- noise resets the streak. Set 0 to use ACCUM_REPORT only.
+
 endif
 
 endif
