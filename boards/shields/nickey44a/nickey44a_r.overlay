@@ -61,10 +61,10 @@
 };
 
 &zip_tp_layer {
-    activation-threshold = <24>;
-    min-activation-frames = <2>;
+    activation-threshold = <36>;
+    min-activation-frames = <3>;
     activation-window-ms = <350>;
-    require-prior-idle-ms = <250>;
+    require-prior-idle-ms = <300>;
     excluded-positions = <38 39 40 41 42 43>;
 };
 

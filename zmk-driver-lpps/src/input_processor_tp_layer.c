@@ -9,8 +9,9 @@
  *   so back-and-forth jitter cancels out instead of accumulating, and requires
  *   at least `min-activation-frames` consecutive sync frames so isolated 1-2
  *   packet leaks never trigger Layer 4.
- * - Reports with absolute value below 3 do not count toward activation and do
- *   not extend the active timeout, so leftover +/-1 jitter cannot hold Layer 4.
+ * - Reports with absolute value below 3 do not count toward activation.
+ *   While active, any non-zero motion extends the timeout; sub-3 jitter alone
+ *   cannot arm Layer 4 before activation.
  * - Once active, an X/Y report of absolute value 3 or more extends `param2` ms.
  */
 
@@ -80,6 +81,8 @@ static bool pos_is_excluded(const struct tp_layer_config *cfg, uint32_t pos) {
 
 static void activate_work_cb(struct k_work *work) {
     struct tp_layer_data *data = CONTAINER_OF(work, struct tp_layer_data, activate_work);
+    uint8_t layer = 0;
+    bool arm_activate = false;
 
     if (k_mutex_lock(&data->lock, K_FOREVER) < 0) {
         return;
@@ -87,15 +90,26 @@ static void activate_work_cb(struct k_work *work) {
 
     if (!data->is_active) {
         data->is_active = true;
-        zmk_keymap_layer_activate(data->target_layer);
+        layer = data->target_layer;
+        arm_activate = true;
     }
 
     k_mutex_unlock(&data->lock);
+
+    /*
+     * layer_activate raises zmk_layer_state_changed synchronously; the same
+     * thread must not hold data->lock or tp_layer_event_listener deadlocks.
+     */
+    if (arm_activate) {
+        zmk_keymap_layer_activate(layer);
+    }
 }
 
 static void disable_work_cb(struct k_work *work) {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
     struct tp_layer_data *data = CONTAINER_OF(dwork, struct tp_layer_data, disable_work);
+    uint8_t layer = 0;
+    bool layer_was_active = false;
 
     if (k_mutex_lock(&data->lock, K_FOREVER) < 0) {
         return;
@@ -104,12 +118,15 @@ static void disable_work_cb(struct k_work *work) {
     if (data->is_active) {
         data->is_active = false;
         reset_pre_activation(data);
-        if (zmk_keymap_layer_active(data->target_layer)) {
-            zmk_keymap_layer_deactivate(data->target_layer);
-        }
+        layer = data->target_layer;
+        layer_was_active = zmk_keymap_layer_active(layer);
     }
 
     k_mutex_unlock(&data->lock);
+
+    if (layer_was_active) {
+        zmk_keymap_layer_deactivate(layer);
+    }
 }
 
 static int tp_layer_handle_event(const struct device *dev, struct input_event *event,
@@ -137,7 +154,7 @@ static int tp_layer_handle_event(const struct device *dev, struct input_event *e
     data->target_layer = (uint8_t)layer_idx;
 
     if (data->is_active) {
-        if (timeout_ms > 0 && abs(event->value) >= TP_LAYER_MIN_ABS) {
+        if (timeout_ms > 0 && event->value != 0) {
             k_work_reschedule(&data->disable_work, K_MSEC(timeout_ms));
         }
         k_mutex_unlock(&data->lock);
@@ -208,14 +225,20 @@ static void dispatch_to_instance(const struct device *dev, const zmk_event_t *eh
             return;
         }
         if (k_mutex_lock(&data->lock, K_FOREVER) == 0) {
-            if (data->is_active && cfg->num_positions > 0 &&
-                !pos_is_excluded(cfg, pos_ev->position)) {
+            uint8_t layer = data->target_layer;
+            bool drop_layer = data->is_active && cfg->num_positions > 0 &&
+                              !pos_is_excluded(cfg, pos_ev->position);
+
+            if (drop_layer) {
                 data->is_active = false;
                 reset_pre_activation(data);
                 k_work_cancel_delayable(&data->disable_work);
-                zmk_keymap_layer_deactivate(data->target_layer);
             }
             k_mutex_unlock(&data->lock);
+
+            if (drop_layer) {
+                zmk_keymap_layer_deactivate(layer);
+            }
         }
         return;
     }
